@@ -168,7 +168,12 @@ function renderSimpleView(item, jsonPanelContent) {
             </div>
             <div class="detail-panel">
                 <div class="panel-header">标注数据 (JSON)</div>
-                <div class="json-viewer">${jsonPanelContent}</div>
+                <div class="json-viewer">
+                    <details class="json-details">
+                        <summary>点击展开查看JSON数据</summary>
+                        ${jsonPanelContent}
+                    </details>
+                </div>
             </div>
         </div>`;
 }
@@ -245,8 +250,8 @@ function renderGraphFullView(item) {
 
                 <div class="graph-section">
                     <h3 class="section-subtitle">📋 原始JSON</h3>
-                    <details class="json-details" open>
-                        <summary>展开/收起</summary>
+                    <details class="json-details">
+                        <summary>点击展开查看原始JSON数据</summary>
                         <pre class="json-display"><code>${syntaxHighlight(JSON.stringify(data, null, 2))}</code></pre>
                     </details>
                 </div>
