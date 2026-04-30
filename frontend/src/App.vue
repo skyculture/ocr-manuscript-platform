@@ -2,7 +2,6 @@
   <div class="app">
     <nav class="navbar">
       <div class="nav-brand">
-        <span class="nav-icon">�️</span>
         <span class="nav-title">笔迹解码</span>
       </div>
       <div class="nav-links">
