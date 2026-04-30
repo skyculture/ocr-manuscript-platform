@@ -4,7 +4,7 @@
 <div class="page-container">
     <div class="page-header">
         <h1 class="page-title">🏷️ 数据标注展示</h1>
-        <p class="page-subtitle">查看原始手稿图片及对应的JSON标注文件</p>
+        <p class="page-subtitle">查看原始手稿图片及对应的图结构JSON标注文件</p>
     </div>
     <div class="toolbar">
         <div class="toolbar-left">
@@ -37,10 +37,6 @@
             <button type="submit" class="btn btn-primary">上传</button>
         </form>
     </div>
-    <div class="view-toggle">
-        <button class="toggle-btn active" onclick="setView('split')" id="btnSplit">图文对照</button>
-        <button class="toggle-btn" onclick="setView('grid')" id="btnGrid">网格视图</button>
-    </div>
     <div id="annotationContent" class="annotation-content">
         <div class="empty-state">
             <div class="empty-icon">📭</div>
@@ -53,19 +49,7 @@
 {% block scripts %}
 <script>
 let annotationData = [];
-let currentView = 'split';
 let selectedIndex = 0;
-
-function setView(view) {
-    currentView = view;
-    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-    if (view === 'split') {
-        document.getElementById('btnSplit').classList.add('active');
-    } else {
-        document.getElementById('btnGrid').classList.add('active');
-    }
-    renderAnnotation();
-}
 
 async function loadAnnotationData() {
     try {
@@ -88,19 +72,56 @@ function renderAnnotation() {
             </div>`;
         return;
     }
-    if (currentView === 'split') {
-        renderSplitView(container);
-    } else {
-        renderGridView(container);
-    }
+    renderDetailView(container);
 }
 
-function renderSplitView(container) {
+function isGraphFormat(data) {
+    return Array.isArray(data) && data.length > 0 && data[0].node_id !== undefined;
+}
+
+function getTypeLabel(type) {
+    const labels = {
+        'TEXT': '文本',
+        'SIGNATURE': '签名',
+        'SEAL': '印章',
+        'SYMBOL_PLACEHOLDER': '符号占位',
+        'ILLUSTRATION': '插图',
+        'MARGINALIA': '批注',
+        'PAGE_NUMBER': '页码',
+        'HEADER': '页眉',
+        'FOOTER': '页脚'
+    };
+    return labels[type] || type;
+}
+
+function getTypeClass(type) {
+    const map = {
+        'TEXT': 'type-text',
+        'SIGNATURE': 'type-signature',
+        'SEAL': 'type-seal',
+        'SYMBOL_PLACEHOLDER': 'type-symbol',
+        'ILLUSTRATION': 'type-illustration',
+        'MARGINALIA': 'type-marginalia'
+    };
+    return map[type] || 'type-other';
+}
+
+function getRelationLabel(relation) {
+    const labels = {
+        'READS_AFTER': '续读',
+        'REPRESENTS': '代表',
+        'BELONGS_TO': '属于',
+        'AUTHORED': '作者',
+        'CONTAINS': '包含',
+        'REFERENCES': '引用',
+        'ANNOTATES': '批注'
+    };
+    return labels[relation] || relation;
+}
+
+function renderDetailView(container) {
     const listHtml = annotationData.map((item, idx) => `
         <div class="annotation-list-item ${idx === selectedIndex ? 'selected' : ''}" onclick="selectAnnotation(${idx})">
-            <div class="list-item-thumb">
-                <img src="${item.image_url}" alt="${item.name}" loading="lazy">
-            </div>
             <div class="list-item-info">
                 <div class="list-item-name">${item.name}</div>
                 <div class="list-item-status">
@@ -111,46 +132,173 @@ function renderSplitView(container) {
     `).join('');
 
     const item = annotationData[selectedIndex];
-    const jsonDisplay = item.has_json
-        ? `<pre class="json-display"><code>${syntaxHighlight(JSON.stringify(item.json_data, null, 2))}</code></pre>`
-        : '<div class="no-json">暂无标注数据</div>';
+    let jsonPanelContent = '';
+
+    if (item.has_json && item.json_data) {
+        const data = item.json_data;
+        if (isGraphFormat(data)) {
+            jsonPanelContent = renderGraphAnnotation(data);
+        } else {
+            jsonPanelContent = `<pre class="json-display"><code>${syntaxHighlight(JSON.stringify(data, null, 2))}</code></pre>`;
+        }
+    } else {
+        jsonPanelContent = '<div class="no-json">暂无标注数据</div>';
+    }
 
     container.innerHTML = `
         <div class="split-view">
             <div class="split-list">
-                <div class="split-list-header">图片列表</div>
+                <div class="split-list-header">文件列表</div>
                 <div class="split-list-body">${listHtml}</div>
             </div>
-            <div class="split-detail">
-                <div class="split-image-panel">
-                    <div class="panel-header">原始图片</div>
-                    <div class="image-viewer">
-                        <img src="${item.image_url}" alt="${item.name}" id="detailImage">
+            <div class="split-detail-wide">
+                ${item.has_json && isGraphFormat(item.json_data) ? renderGraphFullView(item) : renderSimpleView(item, jsonPanelContent)}
+            </div>
+        </div>`;
+}
+
+function renderSimpleView(item, jsonPanelContent) {
+    return `
+        <div class="detail-panels-vertical">
+            <div class="detail-panel">
+                <div class="panel-header">原始图片</div>
+                <div class="image-viewer">
+                    ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}">` : '<div class="no-json">暂无图片</div>'}
+                </div>
+            </div>
+            <div class="detail-panel">
+                <div class="panel-header">标注数据 (JSON)</div>
+                <div class="json-viewer">${jsonPanelContent}</div>
+            </div>
+        </div>`;
+}
+
+function renderGraphFullView(item) {
+    const data = item.json_data;
+    const typeStats = {};
+    let edgeCount = 0;
+    data.forEach(node => {
+        typeStats[node.type] = (typeStats[node.type] || 0) + 1;
+        edgeCount += (node.edges || []).length;
+    });
+
+    return `
+        <div class="graph-annotation-view">
+            <div class="graph-summary">
+                <div class="summary-cards">
+                    <div class="summary-card"><div class="summary-value">${data.length}</div><div class="summary-label">节点总数</div></div>
+                    <div class="summary-card"><div class="summary-value">${edgeCount}</div><div class="summary-label">边总数</div></div>
+                    <div class="summary-card"><div class="summary-value">${Object.keys(typeStats).length}</div><div class="summary-label">节点类型</div></div>
+                </div>
+                <div class="type-stats">
+                    ${Object.entries(typeStats).map(([type, count]) =>
+                        `<span class="type-stat-badge ${getTypeClass(type)}">${getTypeLabel(type)}: ${count}</span>`
+                    ).join('')}
+                </div>
+            </div>
+
+            <div class="graph-sections">
+                <div class="graph-section">
+                    <h3 class="section-subtitle">📋 节点列表</h3>
+                    <div class="nodes-table-wrapper">
+                        <table class="nodes-table">
+                            <thead>
+                                <tr>
+                                    <th>node_id</th>
+                                    <th>类型</th>
+                                    <th>转写文本</th>
+                                    <th>位置 (points)</th>
+                                    <th>属性</th>
+                                    <th>边</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(node => `
+                                    <tr>
+                                        <td class="cell-id">${escapeHtml(node.node_id)}</td>
+                                        <td><span class="type-badge ${getTypeClass(node.type)}">${getTypeLabel(node.type)}</span></td>
+                                        <td class="cell-transcription">${escapeHtml(node.transcription || '')}</td>
+                                        <td class="cell-points">${formatPoints(node.points)}</td>
+                                        <td class="cell-attrs">${formatAttrs(node.attributes)}</td>
+                                        <td class="cell-edges">${formatEdges(node.edges)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="split-json-panel">
-                    <div class="panel-header">标注数据 (JSON)</div>
-                    <div class="json-viewer">${jsonDisplay}</div>
+
+                <div class="graph-section">
+                    <h3 class="section-subtitle">🔗 边关系</h3>
+                    <div class="edges-list">
+                        ${renderEdgesList(data)}
+                    </div>
+                </div>
+
+                ${item.image_url ? `
+                <div class="graph-section">
+                    <h3 class="section-subtitle">🖼️ 原始图片</h3>
+                    <div class="annotation-image-viewer">
+                        <img src="${item.image_url}" alt="${item.name}" loading="lazy">
+                    </div>
+                </div>` : ''}
+
+                <div class="graph-section">
+                    <h3 class="section-subtitle">📋 原始JSON</h3>
+                    <details class="json-details" open>
+                        <summary>展开/收起</summary>
+                        <pre class="json-display"><code>${syntaxHighlight(JSON.stringify(data, null, 2))}</code></pre>
+                    </details>
                 </div>
             </div>
         </div>`;
 }
 
-function renderGridView(container) {
-    const cardsHtml = annotationData.map((item, idx) => `
-        <div class="grid-card" onclick="showGridDetail(${idx})">
-            <div class="grid-card-image">
-                <img src="${item.image_url}" alt="${item.name}" loading="lazy">
-            </div>
-            <div class="grid-card-info">
-                <div class="grid-card-name">${item.name}</div>
-                <div class="grid-card-status">
-                    ${item.has_json ? '<span class="status-badge status-done">已标注</span>' : '<span class="status-badge status-pending">未标注</span>'}
-                </div>
-            </div>
-        </div>
-    `).join('');
-    container.innerHTML = `<div class="grid-view">${cardsHtml}</div>`;
+function renderGraphAnnotation(data) {
+    return `<pre class="json-display"><code>${syntaxHighlight(JSON.stringify(data, null, 2))}</code></pre>`;
+}
+
+function renderEdgesList(data) {
+    const allEdges = [];
+    data.forEach(node => {
+        (node.edges || []).forEach(edge => {
+            allEdges.push({ source: node.node_id, target: edge.target, relation: edge.relation });
+        });
+    });
+    if (allEdges.length === 0) {
+        return '<p class="no-edges">无边关系</p>';
+    }
+    return `<table class="edges-table">
+        <thead><tr><th>源节点</th><th>关系</th><th>目标节点</th></tr></thead>
+        <tbody>${allEdges.map(e => `
+            <tr>
+                <td class="cell-id">${escapeHtml(e.source)}</td>
+                <td><span class="relation-badge">${getRelationLabel(e.relation)}</span></td>
+                <td class="cell-id">${escapeHtml(e.target)}</td>
+            </tr>
+        `).join('')}</tbody>
+    </table>`;
+}
+
+function formatPoints(points) {
+    if (!points || !Array.isArray(points)) return '-';
+    return points.map(p => `(${p[0]},${p[1]})`).join(' → ');
+}
+
+function formatAttrs(attrs) {
+    if (!attrs || Object.keys(attrs).length === 0) return '-';
+    return Object.entries(attrs).map(([k, v]) => `${k}=${v}`).join(', ');
+}
+
+function formatEdges(edges) {
+    if (!edges || edges.length === 0) return '-';
+    return edges.map(e => `→${escapeHtml(e.target)}(${getRelationLabel(e.relation)})`).join('<br>');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
 }
 
 function selectAnnotation(idx) {
@@ -158,26 +306,14 @@ function selectAnnotation(idx) {
     renderAnnotation();
 }
 
-function showGridDetail(idx) {
-    selectedIndex = idx;
-    setView('split');
-}
-
 function syntaxHighlight(json) {
     json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
         let cls = 'json-number';
         if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-                cls = 'json-key';
-            } else {
-                cls = 'json-string';
-            }
-        } else if (/true|false/.test(match)) {
-            cls = 'json-boolean';
-        } else if (/null/.test(match)) {
-            cls = 'json-null';
-        }
+            if (/:$/.test(match)) { cls = 'json-key'; } else { cls = 'json-string'; }
+        } else if (/true|false/.test(match)) { cls = 'json-boolean'; }
+        else if (/null/.test(match)) { cls = 'json-null'; }
         return '<span class="' + cls + '">' + match + '</span>';
     });
 }

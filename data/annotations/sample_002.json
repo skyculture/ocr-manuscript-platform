@@ -1,44 +1,93 @@
-{
-  "image_info": {
-    "filename": "manuscript_002.png",
-    "width": 1000,
-    "height": 700,
-    "format": "PNG"
+[
+  {
+    "node_id": "n_signature_1",
+    "type": "SIGNATURE",
+    "transcription": "苏轼",
+    "points": [[100, 60], [200, 60], [200, 130], [100, 130]],
+    "attributes": {
+      "z_index": 2,
+      "color": "black"
+    },
+    "edges": [
+      { "target": "n_text_1", "relation": "AUTHORED" },
+      { "target": "n_symbol_1", "relation": "READS_AFTER" }
+    ]
   },
-  "annotations": [
-    {
-      "id": 1,
-      "type": "text_block",
-      "bbox": [100, 60, 500, 130],
-      "text": "大江东去浪淘尽",
-      "confidence": 0.94
+  {
+    "node_id": "n_symbol_1",
+    "type": "SYMBOL_PLACEHOLDER",
+    "transcription": "○",
+    "points": [[105, 140], [145, 140], [145, 170], [105, 170]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 2,
-      "type": "text_block",
-      "bbox": [100, 150, 500, 220],
-      "text": "千古风流人物",
-      "confidence": 0.89
+    "edges": [
+      { "target": "苏轼", "relation": "REPRESENTS" },
+      { "target": "n_text_1", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_1",
+    "type": "TEXT",
+    "transcription": "大江东去浪淘尽",
+    "points": [[100, 180], [500, 180], [500, 260], [100, 260]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 3,
-      "type": "text_block",
-      "bbox": [100, 240, 500, 310],
-      "text": "故垒西边人道是",
-      "confidence": 0.91
+    "edges": [
+      { "target": "n_text_2", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_2",
+    "type": "TEXT",
+    "transcription": "千古风流人物",
+    "points": [[100, 270], [500, 270], [500, 340], [100, 340]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 4,
-      "type": "text_block",
-      "bbox": [100, 330, 500, 400],
-      "text": "三国周郎赤壁",
-      "confidence": 0.86
-    }
-  ],
-  "metadata": {
-    "annotator": "李四",
-    "annotate_date": "2026-01-12",
-    "review_status": "待审核",
-    "notes": "宋代手稿，部分字迹模糊"
+    "edges": [
+      { "target": "n_text_3", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_3",
+    "type": "TEXT",
+    "transcription": "故垒西边人道是",
+    "points": [[100, 350], [500, 350], [500, 420], [100, 420]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
+    },
+    "edges": [
+      { "target": "n_text_4", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_4",
+    "type": "TEXT",
+    "transcription": "三国周郎赤壁",
+    "points": [[100, 430], [500, 430], [500, 500], [100, 500]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
+    },
+    "edges": []
+  },
+  {
+    "node_id": "n_seal_1",
+    "type": "SEAL",
+    "transcription": "东坡居士",
+    "points": [[400, 510], [490, 510], [490, 600], [400, 600]],
+    "attributes": {
+      "z_index": 2,
+      "color": "red"
+    },
+    "edges": [
+      { "target": "n_signature_1", "relation": "BELONGS_TO" }
+    ]
   }
-}
+]

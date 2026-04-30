@@ -1,72 +1,117 @@
-{
-  "image_info": {
-    "filename": "manuscript_001.png",
-    "width": 1200,
-    "height": 800,
-    "format": "PNG"
+[
+  {
+    "node_id": "n_text_1",
+    "type": "TEXT",
+    "transcription": "春江潮水连海平",
+    "points": [[120, 80], [580, 80], [580, 160], [120, 160]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
+    },
+    "edges": [
+      { "target": "n_text_2", "relation": "READS_AFTER" }
+    ]
   },
-  "annotations": [
-    {
-      "id": 1,
-      "type": "text_block",
-      "bbox": [120, 80, 580, 160],
-      "text": "春江潮水连海平",
-      "confidence": 0.95
+  {
+    "node_id": "n_text_2",
+    "type": "TEXT",
+    "transcription": "海上明月共潮生",
+    "points": [[120, 180], [580, 180], [580, 260], [120, 260]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 2,
-      "type": "text_block",
-      "bbox": [120, 180, 580, 260],
-      "text": "海上明月共潮生",
-      "confidence": 0.92
+    "edges": [
+      { "target": "n_text_3", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_3",
+    "type": "TEXT",
+    "transcription": "滟滟随波千万里",
+    "points": [[120, 280], [580, 280], [580, 360], [120, 360]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 3,
-      "type": "text_block",
-      "bbox": [120, 280, 580, 360],
-      "text": "滟滟随波千万里",
-      "confidence": 0.88
+    "edges": [
+      { "target": "n_text_4", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_4",
+    "type": "TEXT",
+    "transcription": "何处春江无月明",
+    "points": [[120, 380], [580, 380], [580, 460], [120, 460]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 4,
-      "type": "text_block",
-      "bbox": [120, 380, 580, 460],
-      "text": "何处春江无月明",
-      "confidence": 0.91
+    "edges": [
+      { "target": "n_text_5", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_5",
+    "type": "TEXT",
+    "transcription": "江流宛转绕芳甸",
+    "points": [[650, 80], [1100, 80], [1100, 160], [650, 160]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 5,
-      "type": "text_block",
-      "bbox": [650, 80, 1100, 160],
-      "text": "江流宛转绕芳甸",
-      "confidence": 0.87
+    "edges": [
+      { "target": "n_text_6", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_6",
+    "type": "TEXT",
+    "transcription": "月照花林皆似霰",
+    "points": [[650, 180], [1100, 180], [1100, 260], [650, 260]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 6,
-      "type": "text_block",
-      "bbox": [650, 180, 1100, 260],
-      "text": "月照花林皆似霰",
-      "confidence": 0.90
+    "edges": [
+      { "target": "n_text_7", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_7",
+    "type": "TEXT",
+    "transcription": "空里流霜不觉飞",
+    "points": [[650, 280], [1100, 280], [1100, 360], [650, 360]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 7,
-      "type": "text_block",
-      "bbox": [650, 280, 1100, 360],
-      "text": "空里流霜不觉飞",
-      "confidence": 0.85
+    "edges": [
+      { "target": "n_text_8", "relation": "READS_AFTER" }
+    ]
+  },
+  {
+    "node_id": "n_text_8",
+    "type": "TEXT",
+    "transcription": "汀上白沙看不见",
+    "points": [[650, 380], [1100, 380], [1100, 460], [650, 460]],
+    "attributes": {
+      "z_index": 1,
+      "color": "black"
     },
-    {
-      "id": 8,
-      "type": "text_block",
-      "bbox": [650, 380, 1100, 460],
-      "text": "汀上白沙看不见",
-      "confidence": 0.93
-    }
-  ],
-  "metadata": {
-    "annotator": "张三",
-    "annotate_date": "2026-01-10",
-    "review_status": "已审核",
-    "notes": "该手稿为唐代书法作品，字迹清晰度中等"
+    "edges": []
+  },
+  {
+    "node_id": "n_seal_1",
+    "type": "SEAL",
+    "transcription": "张氏",
+    "points": [[900, 500], [1000, 500], [1000, 600], [900, 600]],
+    "attributes": {
+      "z_index": 2,
+      "color": "red"
+    },
+    "edges": [
+      { "target": "n_text_8", "relation": "BELONGS_TO" }
+    ]
   }
-}
+]
