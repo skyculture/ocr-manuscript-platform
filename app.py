@@ -6,9 +6,12 @@ import threading
 import time
 import re
 import sys
+import pymysql
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+
+pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
 
@@ -40,8 +43,14 @@ if IS_CLOUD:
         os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "instance", "app.db")}'
-    os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
+    mysql_host = os.environ.get('MYSQL_HOST', 'localhost')
+    mysql_port = os.environ.get('MYSQL_PORT', '3306')
+    mysql_user = os.environ.get('MYSQL_USER', 'root')
+    mysql_password = os.environ.get('MYSQL_PASSWORD', 'oyhm070429')
+    mysql_db = os.environ.get('MYSQL_DB', 'ocr_platform')
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        f'mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}?charset=utf8mb4'
+    )
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
