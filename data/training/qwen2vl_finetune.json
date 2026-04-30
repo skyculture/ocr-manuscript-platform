@@ -1,0 +1,62 @@
+{
+  "model_name": "Qwen2-VL-7B 手稿识别微调模型",
+  "training_config": {
+    "base_model": "Qwen2-VL-7B-Instruct",
+    "learning_rate": 0.0002,
+    "epochs": 15,
+    "batch_size": 8,
+    "optimizer": "AdamW",
+    "warmup_steps": 500,
+    "weight_decay": 0.01,
+    "max_length": 2048,
+    "lora_rank": 64,
+    "lora_alpha": 128
+  },
+  "metrics": {
+    "accuracy": 0.923,
+    "precision": 0.915,
+    "recall": 0.918,
+    "f1_score": 0.916,
+    "cer": 0.077,
+    "wer": 0.125
+  },
+  "training_log": [
+    {"epoch": 1, "loss": 3.245, "val_loss": 3.512, "accuracy": 0.412},
+    {"epoch": 2, "loss": 2.876, "val_loss": 2.934, "accuracy": 0.523},
+    {"epoch": 3, "loss": 2.412, "val_loss": 2.567, "accuracy": 0.618},
+    {"epoch": 4, "loss": 2.034, "val_loss": 2.198, "accuracy": 0.695},
+    {"epoch": 5, "loss": 1.756, "val_loss": 1.923, "accuracy": 0.742},
+    {"epoch": 6, "loss": 1.523, "val_loss": 1.712, "accuracy": 0.789},
+    {"epoch": 7, "loss": 1.345, "val_loss": 1.534, "accuracy": 0.823},
+    {"epoch": 8, "loss": 1.198, "val_loss": 1.389, "accuracy": 0.856},
+    {"epoch": 9, "loss": 1.067, "val_loss": 1.278, "accuracy": 0.878},
+    {"epoch": 10, "loss": 0.956, "val_loss": 1.189, "accuracy": 0.895},
+    {"epoch": 11, "loss": 0.867, "val_loss": 1.123, "accuracy": 0.908},
+    {"epoch": 12, "loss": 0.789, "val_loss": 1.078, "accuracy": 0.915},
+    {"epoch": 13, "loss": 0.723, "val_loss": 1.045, "accuracy": 0.919},
+    {"epoch": 14, "loss": 0.678, "val_loss": 1.023, "accuracy": 0.921},
+    {"epoch": 15, "loss": 0.634, "val_loss": 1.012, "accuracy": 0.923}
+  ],
+  "sample_outputs": [
+    {
+      "input": "春江潮水连海平",
+      "output": "春江潮水连海平",
+      "ground_truth": "春江潮水连海平"
+    },
+    {
+      "input": "海上明月共潮生",
+      "output": "海上明月共潮生",
+      "ground_truth": "海上明月共潮生"
+    },
+    {
+      "input": "滟滟随波千万里",
+      "output": "滟滟随波千万里",
+      "ground_truth": "滟滟随波千万里"
+    },
+    {
+      "input": "何处春江无月明",
+      "output": "何处春江无月明",
+      "ground_truth": "何处春江无月明"
+    }
+  ]
+}

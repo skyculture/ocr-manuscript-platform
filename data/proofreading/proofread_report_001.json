@@ -1,0 +1,40 @@
+{
+  "document_name": "春江花月夜手稿校对报告",
+  "proofreader": "王教授",
+  "proofread_date": "2026-02-15",
+  "original_text": "春江潮水连梅平，海上明月共潮生。艳艳随波千万里，何处春江无月明。江流宛转绕芳甸，月照花林皆似霰。空里流霜不觉飞，汀上白沙看不见。",
+  "corrected_text": "春江潮水连海平，海上明月共潮生。滟滟随波千万里，何处春江无月明。江流宛转绕芳甸，月照花林皆似霰。空里流霜不觉飞，汀上白沙看不见。",
+  "corrections": [
+    {
+      "position": 6,
+      "original": "梅",
+      "corrected": "海",
+      "type": "错别字",
+      "note": "形近字误识，'海'与'梅'字形相似"
+    },
+    {
+      "position": 14,
+      "original": "艳",
+      "corrected": "滟",
+      "type": "错别字",
+      "note": "同音字误识，应为'滟滟'形容水波"
+    },
+    {
+      "position": 15,
+      "original": "艳",
+      "corrected": "滟",
+      "type": "错别字",
+      "note": "同上，连续误识"
+    }
+  ],
+  "statistics": {
+    "total_chars": 56,
+    "error_chars": 3,
+    "accuracy": 0.946,
+    "error_types": {
+      "错别字": 3,
+      "漏字": 0,
+      "多字": 0
+    }
+  }
+}

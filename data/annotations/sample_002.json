@@ -1,0 +1,44 @@
+{
+  "image_info": {
+    "filename": "manuscript_002.png",
+    "width": 1000,
+    "height": 700,
+    "format": "PNG"
+  },
+  "annotations": [
+    {
+      "id": 1,
+      "type": "text_block",
+      "bbox": [100, 60, 500, 130],
+      "text": "大江东去浪淘尽",
+      "confidence": 0.94
+    },
+    {
+      "id": 2,
+      "type": "text_block",
+      "bbox": [100, 150, 500, 220],
+      "text": "千古风流人物",
+      "confidence": 0.89
+    },
+    {
+      "id": 3,
+      "type": "text_block",
+      "bbox": [100, 240, 500, 310],
+      "text": "故垒西边人道是",
+      "confidence": 0.91
+    },
+    {
+      "id": 4,
+      "type": "text_block",
+      "bbox": [100, 330, 500, 400],
+      "text": "三国周郎赤壁",
+      "confidence": 0.86
+    }
+  ],
+  "metadata": {
+    "annotator": "李四",
+    "annotate_date": "2026-01-12",
+    "review_status": "待审核",
+    "notes": "宋代手稿，部分字迹模糊"
+  }
+}

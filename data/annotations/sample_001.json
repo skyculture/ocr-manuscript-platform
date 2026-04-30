@@ -1,0 +1,72 @@
+{
+  "image_info": {
+    "filename": "manuscript_001.png",
+    "width": 1200,
+    "height": 800,
+    "format": "PNG"
+  },
+  "annotations": [
+    {
+      "id": 1,
+      "type": "text_block",
+      "bbox": [120, 80, 580, 160],
+      "text": "春江潮水连海平",
+      "confidence": 0.95
+    },
+    {
+      "id": 2,
+      "type": "text_block",
+      "bbox": [120, 180, 580, 260],
+      "text": "海上明月共潮生",
+      "confidence": 0.92
+    },
+    {
+      "id": 3,
+      "type": "text_block",
+      "bbox": [120, 280, 580, 360],
+      "text": "滟滟随波千万里",
+      "confidence": 0.88
+    },
+    {
+      "id": 4,
+      "type": "text_block",
+      "bbox": [120, 380, 580, 460],
+      "text": "何处春江无月明",
+      "confidence": 0.91
+    },
+    {
+      "id": 5,
+      "type": "text_block",
+      "bbox": [650, 80, 1100, 160],
+      "text": "江流宛转绕芳甸",
+      "confidence": 0.87
+    },
+    {
+      "id": 6,
+      "type": "text_block",
+      "bbox": [650, 180, 1100, 260],
+      "text": "月照花林皆似霰",
+      "confidence": 0.90
+    },
+    {
+      "id": 7,
+      "type": "text_block",
+      "bbox": [650, 280, 1100, 360],
+      "text": "空里流霜不觉飞",
+      "confidence": 0.85
+    },
+    {
+      "id": 8,
+      "type": "text_block",
+      "bbox": [650, 380, 1100, 460],
+      "text": "汀上白沙看不见",
+      "confidence": 0.93
+    }
+  ],
+  "metadata": {
+    "annotator": "张三",
+    "annotate_date": "2026-01-10",
+    "review_status": "已审核",
+    "notes": "该手稿为唐代书法作品，字迹清晰度中等"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "model_name": "GPT-4o 手稿识别测试",
+  "training_config": {
+    "base_model": "GPT-4o",
+    "learning_rate": 0,
+    "epochs": 0,
+    "batch_size": 1,
+    "optimizer": "N/A (API调用)",
+    "max_length": 4096,
+    "temperature": 0.1,
+    "prompt_template": "请识别以下手稿图片中的文字内容"
+  },
+  "metrics": {
+    "accuracy": 0.856,
+    "precision": 0.843,
+    "recall": 0.861,
+    "f1_score": 0.852,
+    "cer": 0.144,
+    "wer": 0.198
+  },
+  "training_log": [],
+  "sample_outputs": [
+    {
+      "input": "春江潮水连海平",
+      "output": "春江潮水连梅平",
+      "ground_truth": "春江潮水连海平"
+    },
+    {
+      "input": "海上明月共潮生",
+      "output": "海上明月共潮生",
+      "ground_truth": "海上明月共潮生"
+    },
+    {
+      "input": "滟滟随波千万里",
+      "output": "艳艳随波千万里",
+      "ground_truth": "滟滟随波千万里"
+    },
+    {
+      "input": "何处春江无月明",
+      "output": "何处春江无月明",
+      "ground_truth": "何处春江无月明"
+    }
+  ]
+}

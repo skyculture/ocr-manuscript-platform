@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}首页 - OCR手稿识别项目展示平台{% endblock %}
+{% block content %}
+<div class="home-container">
+    <div class="hero-section">
+        <h1 class="hero-title">OCR手稿识别项目展示平台</h1>
+        <p class="hero-subtitle">全方位展示OCR手稿识别项目的各个阶段成果</p>
+    </div>
+
+    <div class="network-info-panel" id="networkInfoPanel">
+        <div class="network-info-header">
+            <span>🌐 访问地址</span>
+            <button class="btn btn-sm" onclick="loadNetworkInfo()">刷新</button>
+        </div>
+        <div class="network-info-body" id="networkInfoBody">
+            <p>正在检测网络信息...</p>
+        </div>
+    </div>
+
+    <div class="cards-grid">
+        <a href="/annotation" class="card card-annotation">
+            <div class="card-icon">🏷️</div>
+            <h2 class="card-title">数据标注</h2>
+            <p class="card-desc">展示原始手稿图片及对应的标注JSON文件，查看数据标注的质量与进度</p>
+            <div class="card-features">
+                <span class="feature-tag">原始图片浏览</span>
+                <span class="feature-tag">JSON标注查看</span>
+                <span class="feature-tag">图文对照</span>
+            </div>
+        </a>
+        <a href="/training" class="card card-training">
+            <div class="card-icon">🤖</div>
+            <h2 class="card-title">模型训练</h2>
+            <p class="card-desc">展示大模型训练的配置参数、训练指标和识别效果对比</p>
+            <div class="card-features">
+                <span class="feature-tag">训练参数</span>
+                <span class="feature-tag">指标曲线</span>
+                <span class="feature-tag">效果对比</span>
+            </div>
+        </a>
+        <a href="/proofreading" class="card card-proofreading">
+            <div class="card-icon">✅</div>
+            <h2 class="card-title">人工校对</h2>
+            <p class="card-desc">展示专业人员校对后的结果，对比原始识别与校对后的差异</p>
+            <div class="card-features">
+                <span class="feature-tag">校对结果</span>
+                <span class="feature-tag">差异对比</span>
+                <span class="feature-tag">校对统计</span>
+            </div>
+        </a>
+    </div>
+    <div class="workflow-section">
+        <h2 class="section-title">项目工作流程</h2>
+        <div class="workflow-steps">
+            <div class="workflow-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>数据采集与标注</h3>
+                    <p>收集手稿图片，进行人工标注，生成结构化JSON数据</p>
+                </div>
+                <div class="step-arrow">→</div>
+            </div>
+            <div class="workflow-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>模型训练与优化</h3>
+                    <p>使用标注数据训练大模型，迭代优化识别效果</p>
+                </div>
+                <div class="step-arrow">→</div>
+            </div>
+            <div class="workflow-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>人工校对与审核</h3>
+                    <p>专业人员对模型识别结果进行校对，确保最终质量</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let pollTimer = null;
+
+async function loadNetworkInfo() {
+    const body = document.getElementById('networkInfoBody');
+    body.innerHTML = '<p>正在检测网络信息...</p>';
+    try {
+        const resp = await fetch('/api/network-info');
+        const info = await resp.json();
+
+        if (info.tunnel_starting && !info.tunnel_active) {
+            body.innerHTML = '<div class="tunnel-starting"><div class="tunnel-spinner"></div><p>公网隧道正在自动启动中，请稍候...</p></div>';
+            if (pollTimer) clearTimeout(pollTimer);
+            pollTimer = setTimeout(loadNetworkInfo, 3000);
+            return;
+        }
+
+        let html = '';
+
+        if (info.tunnel_active && info.tunnel_url) {
+            html += '<div class="public-url-box">';
+            if (info.is_cloud) {
+                html += '<div class="public-url-label">🌍 云端访问地址（7x24小时在线，电脑关机也可访问）</div>';
+            } else {
+                html += '<div class="public-url-label">🌍 公网访问地址（国内任何网络均可访问）</div>';
+            }
+            html += '<div class="public-url-main"><a href="' + info.tunnel_url + '" target="_blank">' + info.tunnel_url + '</a></div>';
+            html += '<button class="btn btn-copy" onclick="copyUrl(\'' + info.tunnel_url + '\')">复制地址</button>';
+            if (info.is_cloud) {
+                html += '<p class="public-url-hint">此网站已部署在云端服务器，随时均可访问，无需保持电脑开机</p>';
+            } else {
+                html += '<p class="public-url-hint">将此地址发送给其他人，无论对方使用校园网、手机热点还是家庭网络，均可直接访问</p>';
+            }
+            html += '</div>';
+        }
+
+        if (!info.is_cloud) {
+            html += '<div class="access-addresses">';
+            html += '<div class="access-title">局域网访问（同一网络下可用）</div>';
+            html += '<div class="access-list">';
+            html += '<div class="access-item"><span class="access-label">本机：</span><a href="http://localhost:' + info.port + '" class="access-link">http://localhost:' + info.port + '</a></div>';
+            info.ips.forEach(ip => {
+                const campus = (ip.startsWith('100.') || ip.startsWith('10.'));
+                const tag = campus ? ' <span class="campus-tag">校园网</span>' : '';
+                html += '<div class="access-item"><span class="access-label">局域网：</span><a href="http://' + ip + ':' + info.port + '" class="access-link">http://' + ip + ':' + info.port + '</a>' + tag + '</div>';
+            });
+            html += '</div>';
+            html += '</div>';
+        }
+
+        if (info.campus_network_detected) {
+            html += '<div class="campus-note">提示：校园WiFi下局域网地址可能无法互访，请使用上方公网地址</div>';
+        }
+
+        if (!info.tunnel_active && !info.tunnel_starting) {
+            html += '<div class="tunnel-manual">';
+            if (info.cloudflared_available) {
+                html += '<button class="btn btn-tunnel" onclick="startTunnel()">开启公网访问</button>';
+            } else {
+                html += '<p class="tunnel-manual-title">公网隧道未开启（cloudflared.exe未找到）</p>';
+                html += '<p style="font-size:0.8rem;color:#64748b;margin-top:4px">请将 cloudflared.exe 放到项目目录下后重启</p>';
+            }
+            html += '</div>';
+        }
+
+        body.innerHTML = html;
+    } catch (e) {
+        body.innerHTML = '<p class="error-text">获取网络信息失败: ' + e.message + '</p>';
+    }
+}
+
+function copyUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        const btn = event.target;
+        btn.textContent = '已复制!';
+        setTimeout(() => { btn.textContent = '复制地址'; }, 2000);
+    }).catch(() => {
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        const btn = event.target;
+        btn.textContent = '已复制!';
+        setTimeout(() => { btn.textContent = '复制地址'; }, 2000);
+    });
+}
+
+async function startTunnel() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '正在启动...';
+    try {
+        const resp = await fetch('/api/tunnel/start');
+        const result = await resp.json();
+        if (result.success) {
+            loadNetworkInfo();
+        } else {
+            btn.textContent = '启动失败';
+            btn.disabled = false;
+            alert('隧道启动失败：' + (result.message || '未知错误'));
+            setTimeout(() => { btn.textContent = originalText; }, 3000);
+        }
+    } catch (e) {
+        btn.textContent = '启动失败';
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = originalText; }, 3000);
+    }
+}
+
+loadNetworkInfo();
+</script>
+{% endblock %}

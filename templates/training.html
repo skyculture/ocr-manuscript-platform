@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}模型训练 - OCR手稿识别项目展示平台{% endblock %}
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">🤖 模型训练结果展示</h1>
+        <p class="page-subtitle">查看大模型训练的配置、指标和识别效果</p>
+    </div>
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <button class="btn btn-primary" onclick="loadTrainingData()">
+                🔄 刷新数据
+            </button>
+            <span class="data-count" id="trainingCount">共 0 条记录</span>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-secondary" onclick="toggleUploadPanel()">
+                📤 上传训练结果
+            </button>
+        </div>
+    </div>
+    <div class="upload-panel" id="trainingUploadPanel" style="display:none;">
+        <h3>上传训练结果</h3>
+        <form id="trainingUploadForm" onsubmit="uploadTrainingResult(event)">
+            <div class="form-group">
+                <label>JSON结果文件（必需）：</label>
+                <input type="file" name="json_file" accept=".json" required>
+            </div>
+            <div class="form-group">
+                <label>效果对比图（可选）：</label>
+                <input type="file" name="image_file" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary">上传</button>
+        </form>
+        <div class="upload-hint">
+            <p>JSON文件格式示例：</p>
+            <pre class="json-example">{
+  "model_name": "模型名称",
+  "training_config": {
+    "base_model": "基础模型",
+    "learning_rate": 0.001,
+    "epochs": 10,
+    "batch_size": 32
+  },
+  "metrics": {
+    "accuracy": 0.95,
+    "precision": 0.93,
+    "recall": 0.94,
+    "f1_score": 0.935,
+    "cer": 0.05
+  },
+  "training_log": [
+    {"epoch": 1, "loss": 2.5, "val_loss": 2.8},
+    {"epoch": 2, "loss": 1.8, "val_loss": 2.1}
+  ],
+  "sample_outputs": [
+    {"input": "原始文本", "output": "识别结果", "ground_truth": "真实文本"}
+  ]
+}</pre>
+        </div>
+    </div>
+    <div id="trainingContent" class="training-content">
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>暂无训练结果，请上传训练数据</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let trainingData = [];
+
+async function loadTrainingData() {
+    try {
+        const resp = await fetch('/api/training/list');
+        trainingData = await resp.json();
+        document.getElementById('trainingCount').textContent = `共 ${trainingData.length} 条记录`;
+        renderTraining();
+    } catch (e) {
+        console.error('加载数据失败:', e);
+    }
+}
+
+function renderTraining() {
+    const container = document.getElementById('trainingContent');
+    if (trainingData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p>暂无训练结果，请上传训练数据</p>
+            </div>`;
+        return;
+    }
+    const html = trainingData.map((item, idx) => renderTrainingCard(item, idx)).join('');
+    container.innerHTML = `<div class="training-cards">${html}</div>`;
+}
+
+function renderTrainingCard(item, idx) {
+    const data = item.data;
+    const modelName = data.model_name || item.name;
+    const config = data.training_config || {};
+    const metrics = data.metrics || {};
+    const trainingLog = data.training_log || [];
+    const sampleOutputs = data.sample_outputs || [];
+
+    let metricsHtml = '';
+    if (Object.keys(metrics).length > 0) {
+        metricsHtml = `
+            <div class="training-section">
+                <h3 class="section-subtitle">📊 训练指标</h3>
+                <div class="metrics-grid">
+                    ${Object.entries(metrics).map(([key, value]) => `
+                        <div class="metric-card">
+                            <div class="metric-value">${typeof value === 'number' ? (value < 1 ? (value * 100).toFixed(1) + '%' : value.toFixed(4)) : value}</div>
+                            <div class="metric-label">${getMetricLabel(key)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    let configHtml = '';
+    if (Object.keys(config).length > 0) {
+        configHtml = `
+            <div class="training-section">
+                <h3 class="section-subtitle">⚙️ 训练配置</h3>
+                <div class="config-table">
+                    ${Object.entries(config).map(([key, value]) => `
+                        <div class="config-row">
+                            <span class="config-key">${getConfigLabel(key)}</span>
+                            <span class="config-value">${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    let chartHtml = '';
+    if (trainingLog.length > 0) {
+        chartHtml = `
+            <div class="training-section">
+                <h3 class="section-subtitle">📈 训练曲线</h3>
+                <div class="chart-container" id="chart-${idx}"></div>
+            </div>`;
+    }
+
+    let samplesHtml = '';
+    if (sampleOutputs.length > 0) {
+        samplesHtml = `
+            <div class="training-section">
+                <h3 class="section-subtitle">🔍 识别样例</h3>
+                <div class="samples-list">
+                    ${sampleOutputs.map((s, si) => `
+                        <div class="sample-item">
+                            <div class="sample-row"><span class="sample-label">输入：</span><span class="sample-text">${s.input || '-'}</span></div>
+                            <div class="sample-row"><span class="sample-label">识别：</span><span class="sample-text sample-output">${s.output || '-'}</span></div>
+                            <div class="sample-row"><span class="sample-label">真实：</span><span class="sample-text sample-ground">${s.ground_truth || '-'}</span></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    let imageHtml = '';
+    if (item.has_image) {
+        imageHtml = `
+            <div class="training-section">
+                <h3 class="section-subtitle">🖼️ 效果对比图</h3>
+                <div class="training-image">
+                    <img src="${item.image_url}" alt="${item.name}" loading="lazy">
+                </div>
+            </div>`;
+    }
+
+    return `
+        <div class="training-card">
+            <div class="training-card-header">
+                <h2 class="training-card-title">${modelName}</h2>
+                <span class="training-card-filename">${item.filename}</span>
+            </div>
+            <div class="training-card-body">
+                ${configHtml}
+                ${metricsHtml}
+                ${chartHtml}
+                ${imageHtml}
+                ${samplesHtml}
+                <div class="training-section">
+                    <h3 class="section-subtitle">📋 完整数据</h3>
+                    <details class="json-details">
+                        <summary>查看原始JSON数据</summary>
+                        <pre class="json-display"><code>${syntaxHighlight(JSON.stringify(data, null, 2))}</code></pre>
+                    </details>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getMetricLabel(key) {
+    const labels = {
+        'accuracy': '准确率',
+        'precision': '精确率',
+        'recall': '召回率',
+        'f1_score': 'F1分数',
+        'cer': '字符错误率',
+        'wer': '词错误率',
+        'loss': '损失值',
+        'val_loss': '验证损失',
+        'val_accuracy': '验证准确率'
+    };
+    return labels[key] || key;
+}
+
+function getConfigLabel(key) {
+    const labels = {
+        'base_model': '基础模型',
+        'learning_rate': '学习率',
+        'epochs': '训练轮数',
+        'batch_size': '批大小',
+        'optimizer': '优化器',
+        'dropout': 'Dropout',
+        'max_length': '最大长度',
+        'warmup_steps': '预热步数',
+        'weight_decay': '权重衰减'
+    };
+    return labels[key] || key;
+}
+
+function syntaxHighlight(json) {
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+            if (/:$/.test(match)) { cls = 'json-key'; } else { cls = 'json-string'; }
+        } else if (/true|false/.test(match)) { cls = 'json-boolean'; }
+        else if (/null/.test(match)) { cls = 'json-null'; }
+        return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
+function toggleUploadPanel() {
+    const panel = document.getElementById('trainingUploadPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function uploadTrainingResult(e) {
+    e.preventDefault();
+    const form = document.getElementById('trainingUploadForm');
+    const formData = new FormData(form);
+    try {
+        const resp = await fetch('/api/training/upload', { method: 'POST', body: formData });
+        const result = await resp.json();
+        if (result.success) {
+            alert('训练结果上传成功！');
+            form.reset();
+            document.getElementById('trainingUploadPanel').style.display = 'none';
+            loadTrainingData();
+        } else {
+            alert('上传失败：' + (result.error || '未知错误'));
+        }
+    } catch (err) {
+        alert('上传出错：' + err.message);
+    }
+}
+
+loadTrainingData();
+</script>
+{% endblock %}

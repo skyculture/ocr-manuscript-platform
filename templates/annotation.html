@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}数据标注 - OCR手稿识别项目展示平台{% endblock %}
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">🏷️ 数据标注展示</h1>
+        <p class="page-subtitle">查看原始手稿图片及对应的JSON标注文件</p>
+    </div>
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <button class="btn btn-primary" onclick="loadAnnotationData()">
+                🔄 刷新数据
+            </button>
+            <span class="data-count" id="annotationCount">共 0 条数据</span>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-secondary" onclick="toggleUploadPanel('imageUploadPanel')">
+                📤 上传图片
+            </button>
+            <button class="btn btn-secondary" onclick="toggleUploadPanel('jsonUploadPanel')">
+                📄 上传JSON
+            </button>
+        </div>
+    </div>
+    <div class="upload-panel" id="imageUploadPanel" style="display:none;">
+        <h3>上传原始图片</h3>
+        <form id="imageUploadForm" onsubmit="uploadAnnotationImage(event)">
+            <input type="file" name="image" accept="image/*" required>
+            <button type="submit" class="btn btn-primary">上传</button>
+        </form>
+    </div>
+    <div class="upload-panel" id="jsonUploadPanel" style="display:none;">
+        <h3>上传标注JSON文件</h3>
+        <form id="jsonUploadForm" onsubmit="uploadAnnotationJson(event)">
+            <input type="file" name="json_file" accept=".json" required>
+            <p class="upload-hint">JSON文件名需与对应图片文件名一致（如图片为 sample.png，JSON为 sample.json）</p>
+            <button type="submit" class="btn btn-primary">上传</button>
+        </form>
+    </div>
+    <div class="view-toggle">
+        <button class="toggle-btn active" onclick="setView('split')" id="btnSplit">图文对照</button>
+        <button class="toggle-btn" onclick="setView('grid')" id="btnGrid">网格视图</button>
+    </div>
+    <div id="annotationContent" class="annotation-content">
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>暂无数据，请上传图片和标注文件</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let annotationData = [];
+let currentView = 'split';
+let selectedIndex = 0;
+
+function setView(view) {
+    currentView = view;
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    if (view === 'split') {
+        document.getElementById('btnSplit').classList.add('active');
+    } else {
+        document.getElementById('btnGrid').classList.add('active');
+    }
+    renderAnnotation();
+}
+
+async function loadAnnotationData() {
+    try {
+        const resp = await fetch('/api/annotation/list');
+        annotationData = await resp.json();
+        document.getElementById('annotationCount').textContent = `共 ${annotationData.length} 条数据`;
+        renderAnnotation();
+    } catch (e) {
+        console.error('加载数据失败:', e);
+    }
+}
+
+function renderAnnotation() {
+    const container = document.getElementById('annotationContent');
+    if (annotationData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p>暂无数据，请上传图片和标注文件</p>
+            </div>`;
+        return;
+    }
+    if (currentView === 'split') {
+        renderSplitView(container);
+    } else {
+        renderGridView(container);
+    }
+}
+
+function renderSplitView(container) {
+    const listHtml = annotationData.map((item, idx) => `
+        <div class="annotation-list-item ${idx === selectedIndex ? 'selected' : ''}" onclick="selectAnnotation(${idx})">
+            <div class="list-item-thumb">
+                <img src="${item.image_url}" alt="${item.name}" loading="lazy">
+            </div>
+            <div class="list-item-info">
+                <div class="list-item-name">${item.name}</div>
+                <div class="list-item-status">
+                    ${item.has_json ? '<span class="status-badge status-done">已标注</span>' : '<span class="status-badge status-pending">未标注</span>'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    const item = annotationData[selectedIndex];
+    const jsonDisplay = item.has_json
+        ? `<pre class="json-display"><code>${syntaxHighlight(JSON.stringify(item.json_data, null, 2))}</code></pre>`
+        : '<div class="no-json">暂无标注数据</div>';
+
+    container.innerHTML = `
+        <div class="split-view">
+            <div class="split-list">
+                <div class="split-list-header">图片列表</div>
+                <div class="split-list-body">${listHtml}</div>
+            </div>
+            <div class="split-detail">
+                <div class="split-image-panel">
+                    <div class="panel-header">原始图片</div>
+                    <div class="image-viewer">
+                        <img src="${item.image_url}" alt="${item.name}" id="detailImage">
+                    </div>
+                </div>
+                <div class="split-json-panel">
+                    <div class="panel-header">标注数据 (JSON)</div>
+                    <div class="json-viewer">${jsonDisplay}</div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function renderGridView(container) {
+    const cardsHtml = annotationData.map((item, idx) => `
+        <div class="grid-card" onclick="showGridDetail(${idx})">
+            <div class="grid-card-image">
+                <img src="${item.image_url}" alt="${item.name}" loading="lazy">
+            </div>
+            <div class="grid-card-info">
+                <div class="grid-card-name">${item.name}</div>
+                <div class="grid-card-status">
+                    ${item.has_json ? '<span class="status-badge status-done">已标注</span>' : '<span class="status-badge status-pending">未标注</span>'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+    container.innerHTML = `<div class="grid-view">${cardsHtml}</div>`;
+}
+
+function selectAnnotation(idx) {
+    selectedIndex = idx;
+    renderAnnotation();
+}
+
+function showGridDetail(idx) {
+    selectedIndex = idx;
+    setView('split');
+}
+
+function syntaxHighlight(json) {
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+                cls = 'json-key';
+            } else {
+                cls = 'json-string';
+            }
+        } else if (/true|false/.test(match)) {
+            cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+            cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
+function toggleUploadPanel(panelId) {
+    const panel = document.getElementById(panelId);
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function uploadAnnotationImage(e) {
+    e.preventDefault();
+    const form = document.getElementById('imageUploadForm');
+    const formData = new FormData(form);
+    try {
+        const resp = await fetch('/api/annotation/upload', { method: 'POST', body: formData });
+        const result = await resp.json();
+        if (result.success) {
+            alert('图片上传成功！');
+            form.reset();
+            document.getElementById('imageUploadPanel').style.display = 'none';
+            loadAnnotationData();
+        } else {
+            alert('上传失败：' + (result.error || '未知错误'));
+        }
+    } catch (err) {
+        alert('上传出错：' + err.message);
+    }
+}
+
+async function uploadAnnotationJson(e) {
+    e.preventDefault();
+    const form = document.getElementById('jsonUploadForm');
+    const formData = new FormData(form);
+    try {
+        const resp = await fetch('/api/annotation/json/upload', { method: 'POST', body: formData });
+        const result = await resp.json();
+        if (result.success) {
+            alert('JSON上传成功！');
+            form.reset();
+            document.getElementById('jsonUploadPanel').style.display = 'none';
+            loadAnnotationData();
+        } else {
+            alert('上传失败：' + (result.error || '未知错误'));
+        }
+    } catch (err) {
+        alert('上传出错：' + err.message);
+    }
+}
+
+loadAnnotationData();
+</script>
+{% endblock %}
