@@ -6,12 +6,9 @@ import threading
 import time
 import re
 import sys
-import pymysql
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-
-pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
 
@@ -43,6 +40,11 @@ if IS_CLOUD:
         os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
+    try:
+        import pymysql
+        pymysql.install_as_MySQLdb()
+    except ImportError:
+        pass
     mysql_host = os.environ.get('MYSQL_HOST', 'localhost')
     mysql_port = os.environ.get('MYSQL_PORT', '3306')
     mysql_user = os.environ.get('MYSQL_USER', 'root')
