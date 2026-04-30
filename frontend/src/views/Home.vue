@@ -1,11 +1,14 @@
 <template>
   <div class="home-container">
     <div class="hero-section">
+      <div class="hero-deco-top"></div>
       <h1 class="hero-title">笔迹解码</h1>
       <p class="hero-subtitle">古籍手稿智能识别全流程展示</p>
+      <div class="hero-seal">
+        <span>智</span>
+      </div>
+      <div class="hero-deco-bottom"></div>
     </div>
-
-    <div class="ink-divider"><span>壹 · 访问</span></div>
 
     <div class="network-info-panel" v-if="networkInfo">
       <div class="network-info-header">
@@ -42,71 +45,75 @@
       </div>
     </div>
 
-    <div class="ink-divider"><span>贰 · 模块</span></div>
+    <div class="scroll-section">
+      <div class="scroll-rod top-rod"></div>
+      <div class="scroll-body">
+        <div class="scroll-content">
+          <router-link to="/annotation" class="scroll-card scroll-card-annotation">
+            <div class="scroll-card-number">壹</div>
+            <div class="scroll-card-main">
+              <div class="scroll-card-icon">🏷️</div>
+              <div class="scroll-card-text">
+                <h3>数据标注</h3>
+                <p>展示原始手稿图片及对应的图结构JSON标注文件，支持节点、边关系的可视化展示</p>
+              </div>
+              <div class="scroll-card-tags">
+                <span>图片展示</span>
+                <span>JSON标注</span>
+                <span>图结构</span>
+              </div>
+            </div>
+            <div class="scroll-card-arrow">›</div>
+          </router-link>
 
-    <div class="cards-grid">
-      <router-link to="/annotation" class="card card-annotation">
-        <div class="card-icon">🏷️</div>
-        <div class="card-title">数据标注</div>
-        <div class="card-desc">展示原始手稿图片及对应的图结构JSON标注文件，支持节点、边关系的可视化展示</div>
-        <div class="card-features">
-          <span class="feature-tag">图片展示</span>
-          <span class="feature-tag">JSON标注</span>
-          <span class="feature-tag">图结构</span>
-        </div>
-      </router-link>
-
-      <router-link to="/training" class="card card-training">
-        <div class="card-icon">🤖</div>
-        <div class="card-title">模型训练</div>
-        <div class="card-desc">展示大模型训练的配置参数、训练指标、损失曲线和识别效果样例</div>
-        <div class="card-features">
-          <span class="feature-tag">训练配置</span>
-          <span class="feature-tag">性能指标</span>
-          <span class="feature-tag">效果对比</span>
-        </div>
-      </router-link>
-
-      <router-link to="/proofreading" class="card card-proofreading">
-        <div class="card-icon">✅</div>
-        <div class="card-title">人工校对</div>
-        <div class="card-desc">展示专业人员校对后的结果，对比原始识别与校对差异，统计错误类型分布</div>
-        <div class="card-features">
-          <span class="feature-tag">文本对比</span>
-          <span class="feature-tag">错误标注</span>
-          <span class="feature-tag">统计分析</span>
-        </div>
-      </router-link>
-    </div>
-
-    <div class="ink-divider"><span>叁 · 流程</span></div>
-
-    <div class="workflow-section">
-      <div class="workflow-steps">
-        <div class="workflow-step">
-          <div class="step-number">壹</div>
-          <div class="step-content">
-            <h3>数据标注</h3>
-            <p>对手稿图片进行图结构标注，标注文本、印章、签名等节点及关系</p>
+          <div class="scroll-connector">
+            <div class="connector-line"></div>
+            <div class="connector-dot"></div>
+            <div class="connector-line"></div>
           </div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="workflow-step">
-          <div class="step-number">贰</div>
-          <div class="step-content">
-            <h3>模型训练</h3>
-            <p>使用标注数据微调大模型，评估识别效果和性能指标</p>
+
+          <router-link to="/training" class="scroll-card scroll-card-training">
+            <div class="scroll-card-number">贰</div>
+            <div class="scroll-card-main">
+              <div class="scroll-card-icon">🤖</div>
+              <div class="scroll-card-text">
+                <h3>模型训练</h3>
+                <p>展示大模型训练的配置参数、训练指标、损失曲线和识别效果样例</p>
+              </div>
+              <div class="scroll-card-tags">
+                <span>训练配置</span>
+                <span>性能指标</span>
+                <span>效果对比</span>
+              </div>
+            </div>
+            <div class="scroll-card-arrow">›</div>
+          </router-link>
+
+          <div class="scroll-connector">
+            <div class="connector-line"></div>
+            <div class="connector-dot"></div>
+            <div class="connector-line"></div>
           </div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="workflow-step">
-          <div class="step-number">叁</div>
-          <div class="step-content">
-            <h3>人工校对</h3>
-            <p>专业人员校对模型输出，修正错误并统计质量指标</p>
-          </div>
+
+          <router-link to="/proofreading" class="scroll-card scroll-card-proofreading">
+            <div class="scroll-card-number">叁</div>
+            <div class="scroll-card-main">
+              <div class="scroll-card-icon">✅</div>
+              <div class="scroll-card-text">
+                <h3>人工校对</h3>
+                <p>展示专业人员校对后的结果，对比原始识别与校对差异，统计错误类型分布</p>
+              </div>
+              <div class="scroll-card-tags">
+                <span>文本对比</span>
+                <span>错误标注</span>
+                <span>统计分析</span>
+              </div>
+            </div>
+            <div class="scroll-card-arrow">›</div>
+          </router-link>
         </div>
       </div>
+      <div class="scroll-rod bottom-rod"></div>
     </div>
   </div>
 </template>
