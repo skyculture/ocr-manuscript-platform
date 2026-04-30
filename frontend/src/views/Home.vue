@@ -10,41 +10,6 @@
       <div class="hero-deco-bottom"></div>
     </div>
 
-    <div class="network-info-panel" v-if="networkInfo">
-      <div class="network-info-header">
-        <span>🌐 网络访问信息</span>
-      </div>
-      <div class="network-info-body">
-        <div class="public-url-box" v-if="networkInfo.public_url">
-          <div class="public-url-label">公网访问地址</div>
-          <div class="public-url-main">
-            <a :href="networkInfo.public_url" target="_blank">{{ networkInfo.public_url }}</a>
-          </div>
-          <button class="btn-copy" @click="copyUrl(networkInfo.public_url)">📋 复制链接</button>
-          <div class="public-url-hint">任何设备均可通过此地址访问</div>
-        </div>
-        <div class="access-addresses" v-if="networkInfo.local_ip">
-          <div class="access-title">局域网访问</div>
-          <div class="access-list">
-            <div class="access-item">
-              <span class="access-label">本机：</span>
-              <a class="access-link" href="http://localhost:5000">http://localhost:5000</a>
-            </div>
-            <div class="access-item">
-              <span class="access-label">局域网：</span>
-              <a class="access-link" :href="'http://' + networkInfo.local_ip + ':5000'">
-                http://{{ networkInfo.local_ip }}:5000
-              </a>
-              <span class="campus-tag" v-if="networkInfo.is_campus">校园网</span>
-            </div>
-          </div>
-          <div class="campus-note" v-if="networkInfo.is_campus">
-            ⚠️ 检测到校园网环境，WiFi设备间可能无法互通，建议使用公网地址或手机热点
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="scroll-section">
       <div class="scroll-rod top-rod"></div>
       <div class="scroll-body">
@@ -111,6 +76,31 @@
             </div>
             <div class="scroll-card-arrow">›</div>
           </router-link>
+        </div>
+
+        <div class="scroll-footer" v-if="networkInfo">
+          <details class="network-details">
+            <summary class="network-summary">🌐 访问地址</summary>
+            <div class="network-detail-body">
+              <div class="network-url-row" v-if="networkInfo.public_url">
+                <span class="network-label">公网</span>
+                <a class="network-link" :href="networkInfo.public_url" target="_blank">{{ networkInfo.public_url }}</a>
+                <button class="network-copy-btn" @click.prevent="copyUrl(networkInfo.public_url)">复制</button>
+              </div>
+              <div class="network-url-row" v-if="networkInfo.local_ip">
+                <span class="network-label">本机</span>
+                <a class="network-link" href="http://localhost:5000">localhost:5000</a>
+              </div>
+              <div class="network-url-row" v-if="networkInfo.local_ip">
+                <span class="network-label">局域网</span>
+                <a class="network-link" :href="'http://' + networkInfo.local_ip + ':5000'">{{ networkInfo.local_ip }}:5000</a>
+                <span class="campus-tag" v-if="networkInfo.is_campus">校园网</span>
+              </div>
+              <div class="campus-note" v-if="networkInfo.is_campus">
+                ⚠️ 校园网WiFi设备间可能无法互通，建议使用公网地址
+              </div>
+            </div>
+          </details>
         </div>
       </div>
       <div class="scroll-rod bottom-rod"></div>
