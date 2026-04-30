@@ -3,7 +3,7 @@
     <nav class="navbar">
       <div class="nav-brand">
         <span class="nav-icon">📜</span>
-        <span class="nav-title">OCR手稿识别项目展示平台</span>
+        <span class="nav-title">笔迹解码</span>
       </div>
       <div class="nav-links">
         <router-link to="/" class="nav-link">🏠 首页</router-link>
@@ -16,7 +16,7 @@
       <router-view />
     </main>
     <footer class="footer">
-      OCR手稿识别项目展示平台 &copy; 2026
+      笔迹解码 &copy; 2026
     </footer>
   </div>
 </template>

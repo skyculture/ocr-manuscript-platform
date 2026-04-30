@@ -625,14 +625,14 @@ if __name__ == '__main__':
 
     if IS_CLOUD:
         safe_print('=' * 60)
-        safe_print('  OCR手稿识别项目展示平台 (云端部署)')
+        safe_print('  笔迹解码 (云端部署)')
         safe_print('=' * 60)
         app.run(host='0.0.0.0', port=port)
     else:
         ips = get_all_network_ips()
 
         safe_print('=' * 60)
-        safe_print('  OCR手稿识别项目展示平台 已启动')
+        safe_print('  笔迹解码 已启动')
         safe_print('=' * 60)
         safe_print(f'  本机访问: http://localhost:{port}')
         safe_print('')

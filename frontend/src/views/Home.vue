@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <div class="hero-section">
-      <h1 class="hero-title">OCR手稿识别项目展示平台</h1>
+      <h1 class="hero-title">笔迹解码</h1>
       <p class="hero-subtitle">展示OCR手稿识别项目全流程：数据标注 → 模型训练 → 人工校对</p>
     </div>
 
