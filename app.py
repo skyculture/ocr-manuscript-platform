@@ -6,7 +6,8 @@ import threading
 import time
 import re
 import sys
-from flask import Flask, jsonify, request, send_from_directory
+import base64
+from flask import Flask, jsonify, request, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
@@ -36,8 +37,12 @@ if IS_CLOUD:
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     if not database_url:
-        database_url = f'sqlite:///{os.path.join(BASE_DIR, "instance", "app.db")}'
-        os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
+        supabase_host = os.environ.get('SUPABASE_HOST', 'aws-1-ap-northeast-2.pooler.supabase.com')
+        supabase_port = os.environ.get('SUPABASE_PORT', '5432')
+        supabase_user = os.environ.get('SUPABASE_USER', 'postgres.gefmzrpihedvenpwmbti')
+        supabase_password = os.environ.get('SUPABASE_PASSWORD', 'Rpb1770bZp6hG4T5')
+        supabase_db = os.environ.get('SUPABASE_DB', 'postgres')
+        database_url = f'postgresql://{supabase_user}:{supabase_password}@{supabase_host}:{supabase_port}/{supabase_db}'
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     try:
@@ -55,15 +60,28 @@ else:
     )
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 
 CORS(app)
 db = SQLAlchemy(app)
+
+
+def _get_image_mimetype(filename):
+    if not filename:
+        return 'image/png'
+    ext = filename.lower().rsplit('.', 1)[-1]
+    return {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+            'gif': 'image/gif', 'webp': 'image/webp', 'bmp': 'image/bmp'}.get(ext, 'image/png')
 
 
 class Annotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256), unique=True, nullable=False)
     image_filename = db.Column(db.String(256), nullable=True)
+    image_data = db.Column(db.LargeBinary, nullable=True)
     json_filename = db.Column(db.String(256), nullable=True)
     json_data = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
@@ -76,10 +94,19 @@ class Annotation(db.Model):
             except Exception:
                 parsed_data = {"error": "无法解析JSON数据"}
 
+        has_image = self.image_data is not None or (
+            self.image_filename and os.path.exists(os.path.join(ANNOTATION_IMG_DIR, self.image_filename)))
+
+        image_url = None
+        if self.image_data:
+            image_url = f'/api/annotation/image/{self.name}'
+        elif self.image_filename and os.path.exists(os.path.join(ANNOTATION_IMG_DIR, self.image_filename)):
+            image_url = f'/static/uploads/annotation/{self.image_filename}'
+
         return {
             'name': self.name,
             'filename': self.image_filename or self.json_filename or self.name,
-            'image_url': f'/static/uploads/annotation/{self.image_filename}' if self.image_filename else None,
+            'image_url': image_url,
             'has_json': self.json_data is not None,
             'json_data': parsed_data
         }
@@ -91,6 +118,7 @@ class TrainingResult(db.Model):
     filename = db.Column(db.String(256), nullable=False)
     json_data = db.Column(db.Text, nullable=False)
     image_filename = db.Column(db.String(256), nullable=True)
+    image_data = db.Column(db.LargeBinary, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     def to_dict(self):
@@ -100,15 +128,21 @@ class TrainingResult(db.Model):
         except Exception:
             parsed_data = {"error": "无法解析JSON数据"}
 
-        has_image = self.image_filename is not None and os.path.exists(
-            os.path.join(TRAINING_IMG_DIR, self.image_filename))
+        has_image = self.image_data is not None or (
+            self.image_filename and os.path.exists(os.path.join(TRAINING_IMG_DIR, self.image_filename)))
+
+        image_url = None
+        if self.image_data:
+            image_url = f'/api/training/image/{self.name}'
+        elif self.image_filename and os.path.exists(os.path.join(TRAINING_IMG_DIR, self.image_filename)):
+            image_url = f'/static/uploads/training/{self.image_filename}'
 
         return {
             'name': self.name,
             'filename': self.filename,
             'data': parsed_data,
             'has_image': has_image,
-            'image_url': f'/static/uploads/training/{self.image_filename}' if has_image else None
+            'image_url': image_url
         }
 
 
@@ -118,6 +152,7 @@ class ProofreadingResult(db.Model):
     filename = db.Column(db.String(256), nullable=False)
     json_data = db.Column(db.Text, nullable=False)
     image_filename = db.Column(db.String(256), nullable=True)
+    image_data = db.Column(db.LargeBinary, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     def to_dict(self):
@@ -127,15 +162,21 @@ class ProofreadingResult(db.Model):
         except Exception:
             parsed_data = {"error": "无法解析JSON数据"}
 
-        has_image = self.image_filename is not None and os.path.exists(
-            os.path.join(PROOFREADING_IMG_DIR, self.image_filename))
+        has_image = self.image_data is not None or (
+            self.image_filename and os.path.exists(os.path.join(PROOFREADING_IMG_DIR, self.image_filename)))
+
+        image_url = None
+        if self.image_data:
+            image_url = f'/api/proofreading/image/{self.name}'
+        elif self.image_filename and os.path.exists(os.path.join(PROOFREADING_IMG_DIR, self.image_filename)):
+            image_url = f'/static/uploads/proofreading/{self.image_filename}'
 
         return {
             'name': self.name,
             'filename': self.filename,
             'data': parsed_data,
             'has_image': has_image,
-            'image_url': f'/static/uploads/proofreading/{self.image_filename}' if has_image else None
+            'image_url': image_url
         }
 
 
@@ -250,13 +291,21 @@ def auto_start_tunnel(port):
     tunnel_starting = False
 
 
+def _read_image_as_base64(filepath):
+    try:
+        with open(filepath, 'rb') as f:
+            return f.read()
+    except Exception:
+        return None
+
+
 def migrate_file_data_to_db():
-    if Annotation.query.first() is not None:
+    if Annotation.query.first() is not None and TrainingResult.query.first() is not None and ProofreadingResult.query.first() is not None:
         return
 
-    safe_print('  [迁移] 检测到数据库为空，正在从文件系统迁移数据...')
+    safe_print('  [迁移] 检测到部分表为空，正在从文件系统迁移数据...')
 
-    if os.path.exists(ANNOTATION_IMG_DIR):
+    if Annotation.query.first() is None and os.path.exists(ANNOTATION_IMG_DIR):
         for f in sorted(os.listdir(ANNOTATION_IMG_DIR)):
             if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp')):
                 name = os.path.splitext(f)[0]
@@ -270,15 +319,18 @@ def migrate_file_data_to_db():
                         json_filename = name + '.json'
                     except Exception:
                         pass
+                img_path = os.path.join(ANNOTATION_IMG_DIR, f)
+                img_data = _read_image_as_base64(img_path)
                 record = Annotation(
                     name=name,
                     image_filename=f,
+                    image_data=img_data,
                     json_filename=json_filename,
                     json_data=json.dumps(json_data, ensure_ascii=False) if json_data else None
                 )
                 db.session.add(record)
 
-    if os.path.exists(TRAINING_JSON_DIR):
+    if TrainingResult.query.first() is None and os.path.exists(TRAINING_JSON_DIR):
         for f in sorted(os.listdir(TRAINING_JSON_DIR)):
             if f.lower().endswith('.json'):
                 json_path = os.path.join(TRAINING_JSON_DIR, f)
@@ -286,24 +338,26 @@ def migrate_file_data_to_db():
                     with open(json_path, 'r', encoding='utf-8') as jf:
                         data = json.load(jf)
                     name = os.path.splitext(f)[0]
-                    img_path_png = os.path.join(TRAINING_IMG_DIR, name + '.png')
-                    img_path_jpg = os.path.join(TRAINING_IMG_DIR, name + '.jpg')
                     img_filename = None
-                    if os.path.exists(img_path_png):
-                        img_filename = name + '.png'
-                    elif os.path.exists(img_path_jpg):
-                        img_filename = name + '.jpg'
+                    img_data = None
+                    for ext in ['.png', '.jpg', '.jpeg']:
+                        img_path = os.path.join(TRAINING_IMG_DIR, name + ext)
+                        if os.path.exists(img_path):
+                            img_filename = name + ext
+                            img_data = _read_image_as_base64(img_path)
+                            break
                     record = TrainingResult(
                         name=name,
                         filename=f,
                         json_data=json.dumps(data, ensure_ascii=False),
-                        image_filename=img_filename
+                        image_filename=img_filename,
+                        image_data=img_data
                     )
                     db.session.add(record)
                 except Exception:
                     pass
 
-    if os.path.exists(PROOFREADING_JSON_DIR):
+    if ProofreadingResult.query.first() is None and os.path.exists(PROOFREADING_JSON_DIR):
         for f in sorted(os.listdir(PROOFREADING_JSON_DIR)):
             if f.lower().endswith('.json'):
                 json_path = os.path.join(PROOFREADING_JSON_DIR, f)
@@ -311,18 +365,20 @@ def migrate_file_data_to_db():
                     with open(json_path, 'r', encoding='utf-8') as jf:
                         data = json.load(jf)
                     name = os.path.splitext(f)[0]
-                    img_path_png = os.path.join(PROOFREADING_IMG_DIR, name + '.png')
-                    img_path_jpg = os.path.join(PROOFREADING_IMG_DIR, name + '.jpg')
                     img_filename = None
-                    if os.path.exists(img_path_png):
-                        img_filename = name + '.png'
-                    elif os.path.exists(img_path_jpg):
-                        img_filename = name + '.jpg'
+                    img_data = None
+                    for ext in ['.png', '.jpg', '.jpeg']:
+                        img_path = os.path.join(PROOFREADING_IMG_DIR, name + ext)
+                        if os.path.exists(img_path):
+                            img_filename = name + ext
+                            img_data = _read_image_as_base64(img_path)
+                            break
                     record = ProofreadingResult(
                         name=name,
                         filename=f,
                         json_data=json.dumps(data, ensure_ascii=False),
-                        image_filename=img_filename
+                        image_filename=img_filename,
+                        image_data=img_data
                     )
                     db.session.add(record)
                 except Exception:
@@ -401,6 +457,51 @@ def start_tunnel():
     return jsonify({'success': False, 'message': '隧道启动中，请稍后刷新页面查看'})
 
 
+@app.route('/api/annotation/image/<name>')
+def annotation_image(name):
+    record = Annotation.query.filter_by(name=name).first()
+    if not record:
+        return jsonify({'error': '记录不存在'}), 404
+    if record.image_data:
+        mime = _get_image_mimetype(record.image_filename)
+        return Response(record.image_data, mimetype=mime)
+    if record.image_filename:
+        img_path = os.path.join(ANNOTATION_IMG_DIR, record.image_filename)
+        if os.path.exists(img_path):
+            return send_from_directory(ANNOTATION_IMG_DIR, record.image_filename)
+    return jsonify({'error': '图片不存在'}), 404
+
+
+@app.route('/api/training/image/<name>')
+def training_image(name):
+    record = TrainingResult.query.filter_by(name=name).first()
+    if not record:
+        return jsonify({'error': '记录不存在'}), 404
+    if record.image_data:
+        mime = _get_image_mimetype(record.image_filename)
+        return Response(record.image_data, mimetype=mime)
+    if record.image_filename:
+        img_path = os.path.join(TRAINING_IMG_DIR, record.image_filename)
+        if os.path.exists(img_path):
+            return send_from_directory(TRAINING_IMG_DIR, record.image_filename)
+    return jsonify({'error': '图片不存在'}), 404
+
+
+@app.route('/api/proofreading/image/<name>')
+def proofreading_image(name):
+    record = ProofreadingResult.query.filter_by(name=name).first()
+    if not record:
+        return jsonify({'error': '记录不存在'}), 404
+    if record.image_data:
+        mime = _get_image_mimetype(record.image_filename)
+        return Response(record.image_data, mimetype=mime)
+    if record.image_filename:
+        img_path = os.path.join(PROOFREADING_IMG_DIR, record.image_filename)
+        if os.path.exists(img_path):
+            return send_from_directory(PROOFREADING_IMG_DIR, record.image_filename)
+    return jsonify({'error': '图片不存在'}), 404
+
+
 @app.route('/api/annotation/list')
 def annotation_list():
     records = Annotation.query.order_by(Annotation.created_at.desc()).all()
@@ -418,14 +519,20 @@ def annotation_upload():
         return jsonify({'error': '不支持的图片格式'}), 400
 
     name = os.path.splitext(file.filename)[0]
-    filepath = os.path.join(ANNOTATION_IMG_DIR, file.filename)
-    file.save(filepath)
+    img_data = file.read()
+
+    if not IS_CLOUD:
+        filepath = os.path.join(ANNOTATION_IMG_DIR, file.filename)
+        with open(filepath, 'wb') as f:
+            f.write(img_data)
+        file.seek(0)
 
     record = Annotation.query.filter_by(name=name).first()
     if record:
         record.image_filename = file.filename
+        record.image_data = img_data
     else:
-        record = Annotation(name=name, image_filename=file.filename)
+        record = Annotation(name=name, image_filename=file.filename, image_data=img_data)
         db.session.add(record)
     db.session.commit()
     return jsonify({'success': True, 'filename': file.filename})
@@ -442,12 +549,14 @@ def annotation_json_upload():
         return jsonify({'error': '只支持JSON文件'}), 400
 
     name = os.path.splitext(file.filename)[0]
-    filepath = os.path.join(ANNOTATION_JSON_DIR, file.filename)
-    file.save(filepath)
+
+    if not IS_CLOUD:
+        filepath = os.path.join(ANNOTATION_JSON_DIR, file.filename)
+        file.save(filepath)
 
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            json_data = json.load(f)
+        file.seek(0)
+        json_data = json.load(file)
     except Exception:
         return jsonify({'error': 'JSON文件解析失败'}), 400
 
@@ -500,15 +609,21 @@ def training_upload():
         return jsonify({'error': 'JSON文件解析失败'}), 400
 
     name = os.path.splitext(json_file.filename)[0]
-    json_path = os.path.join(TRAINING_JSON_DIR, json_file.filename)
-    json_file.seek(0)
-    json_file.save(json_path)
 
+    if not IS_CLOUD:
+        json_path = os.path.join(TRAINING_JSON_DIR, json_file.filename)
+        json_file.seek(0)
+        json_file.save(json_path)
+
+    img_data = None
     img_filename = None
     if image_file and image_file.filename:
-        img_path = os.path.join(TRAINING_IMG_DIR, image_file.filename)
-        image_file.save(img_path)
+        img_data = image_file.read()
         img_filename = image_file.filename
+        if not IS_CLOUD:
+            img_path = os.path.join(TRAINING_IMG_DIR, image_file.filename)
+            with open(img_path, 'wb') as f:
+                f.write(img_data)
 
     record = TrainingResult.query.filter_by(name=name).first()
     if record:
@@ -516,11 +631,13 @@ def training_upload():
         record.json_data = json.dumps(data, ensure_ascii=False)
         if img_filename:
             record.image_filename = img_filename
+            record.image_data = img_data
     else:
         record = TrainingResult(
             name=name, filename=json_file.filename,
             json_data=json.dumps(data, ensure_ascii=False),
-            image_filename=img_filename
+            image_filename=img_filename,
+            image_data=img_data
         )
         db.session.add(record)
     db.session.commit()
@@ -563,15 +680,21 @@ def proofreading_upload():
         return jsonify({'error': 'JSON文件解析失败'}), 400
 
     name = os.path.splitext(json_file.filename)[0]
-    json_path = os.path.join(PROOFREADING_JSON_DIR, json_file.filename)
-    json_file.seek(0)
-    json_file.save(json_path)
 
+    if not IS_CLOUD:
+        json_path = os.path.join(PROOFREADING_JSON_DIR, json_file.filename)
+        json_file.seek(0)
+        json_file.save(json_path)
+
+    img_data = None
     img_filename = None
     if image_file and image_file.filename:
-        img_path = os.path.join(PROOFREADING_IMG_DIR, image_file.filename)
-        image_file.save(img_path)
+        img_data = image_file.read()
         img_filename = image_file.filename
+        if not IS_CLOUD:
+            img_path = os.path.join(PROOFREADING_IMG_DIR, image_file.filename)
+            with open(img_path, 'wb') as f:
+                f.write(img_data)
 
     record = ProofreadingResult.query.filter_by(name=name).first()
     if record:
@@ -579,11 +702,13 @@ def proofreading_upload():
         record.json_data = json.dumps(data, ensure_ascii=False)
         if img_filename:
             record.image_filename = img_filename
+            record.image_data = img_data
     else:
         record = ProofreadingResult(
             name=name, filename=json_file.filename,
             json_data=json.dumps(data, ensure_ascii=False),
-            image_filename=img_filename
+            image_filename=img_filename,
+            image_data=img_data
         )
         db.session.add(record)
     db.session.commit()
@@ -635,11 +760,6 @@ if __name__ == '__main__':
         safe_print('  笔迹解码 已启动')
         safe_print('=' * 60)
         safe_print(f'  本机访问: http://localhost:{port}')
-        safe_print('')
-        safe_print('  局域网IP地址:')
-        for ip in ips:
-            marker = ' (校园网)' if is_campus_network(ip) else ''
-            safe_print(f'    http://{ip}:{port}{marker}')
         safe_print('')
 
         tunnel_thread = threading.Thread(target=auto_start_tunnel, args=(port,), daemon=True)
