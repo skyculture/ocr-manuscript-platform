@@ -29,7 +29,7 @@ for d in [ANNOTATION_IMG_DIR, ANNOTATION_JSON_DIR,
           PROOFREADING_IMG_DIR, PROOFREADING_JSON_DIR]:
     os.makedirs(d, exist_ok=True)
 
-IS_CLOUD = os.environ.get('RENDER', '') == '1' or os.environ.get('DYNO', '') != ''
+IS_CLOUD = os.environ.get('RENDER', '') == 'true' or os.environ.get('DYNO', '') != ''
 
 if IS_CLOUD:
     database_url = os.environ.get('DATABASE_URL', '')

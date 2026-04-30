@@ -7,6 +7,4 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
-      - key: RENDER
-        value: "1"
     plan: free
