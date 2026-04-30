@@ -2,8 +2,10 @@
   <div class="home-container">
     <div class="hero-section">
       <h1 class="hero-title">笔迹解码</h1>
-      <p class="hero-subtitle">展示OCR手稿识别项目全流程：数据标注 → 模型训练 → 人工校对</p>
+      <p class="hero-subtitle">古籍手稿智能识别全流程展示</p>
     </div>
+
+    <div class="ink-divider"><span>壹 · 访问</span></div>
 
     <div class="network-info-panel" v-if="networkInfo">
       <div class="network-info-header">
@@ -40,6 +42,8 @@
       </div>
     </div>
 
+    <div class="ink-divider"><span>贰 · 模块</span></div>
+
     <div class="cards-grid">
       <router-link to="/annotation" class="card card-annotation">
         <div class="card-icon">🏷️</div>
@@ -75,11 +79,12 @@
       </router-link>
     </div>
 
+    <div class="ink-divider"><span>叁 · 流程</span></div>
+
     <div class="workflow-section">
-      <h2 class="section-title">项目工作流程</h2>
       <div class="workflow-steps">
         <div class="workflow-step">
-          <div class="step-number">1</div>
+          <div class="step-number">壹</div>
           <div class="step-content">
             <h3>数据标注</h3>
             <p>对手稿图片进行图结构标注，标注文本、印章、签名等节点及关系</p>
@@ -87,7 +92,7 @@
         </div>
         <div class="step-arrow">→</div>
         <div class="workflow-step">
-          <div class="step-number">2</div>
+          <div class="step-number">贰</div>
           <div class="step-content">
             <h3>模型训练</h3>
             <p>使用标注数据微调大模型，评估识别效果和性能指标</p>
@@ -95,7 +100,7 @@
         </div>
         <div class="step-arrow">→</div>
         <div class="workflow-step">
-          <div class="step-number">3</div>
+          <div class="step-number">叁</div>
           <div class="step-content">
             <h3>人工校对</h3>
             <p>专业人员校对模型输出，修正错误并统计质量指标</p>
