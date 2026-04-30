@@ -9,4 +9,6 @@ services:
         value: "3.11.0"
       - key: NODE_VERSION
         value: "22"
+      - key: RENDER
+        value: "1"
     plan: free
