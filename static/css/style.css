@@ -414,6 +414,7 @@ body {
     gap: 1rem;
     height: calc(100vh - 300px);
     min-height: 500px;
+    max-height: calc(100vh - 200px);
 }
 
 .split-list {
@@ -564,6 +565,8 @@ body {
     border-radius: var(--radius);
     font-size: 0.8rem;
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 500px;
     line-height: 1.5;
 }
 
@@ -664,6 +667,8 @@ body {
 
 .training-card-body, .proofreading-card-body {
     padding: 1.5rem;
+    max-height: 600px;
+    overflow-y: auto;
 }
 
 .training-section, .proofreading-section {
@@ -984,6 +989,7 @@ body {
     flex: 1;
     overflow-y: auto;
     min-width: 0;
+    max-height: calc(100vh - 200px);
 }
 
 .detail-panels-vertical {
@@ -1067,6 +1073,8 @@ body {
 
 .nodes-table-wrapper {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 400px;
 }
 
 .nodes-table {
@@ -1153,6 +1161,11 @@ body {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.8rem;
+}
+
+.edges-table-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .edges-table th {
