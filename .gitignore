@@ -5,6 +5,8 @@
 !frontend/
 !frontend/**
 !static/
+!static/dist/
+!static/dist/**
 !static/uploads/
 !static/uploads/**
 !data/
