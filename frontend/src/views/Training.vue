@@ -37,8 +37,13 @@
     <div v-else class="training-cards">
       <div v-for="(item, idx) in items" :key="item.name" class="training-card">
         <div class="training-card-header">
-          <h2 class="training-card-title">{{ item.data.model_name || item.name }}</h2>
-          <span class="training-card-filename">{{ item.filename }}</span>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <h2 class="training-card-title">{{ item.data.model_name || item.name }}</h2>
+              <span class="training-card-filename">{{ item.filename }}</span>
+            </div>
+            <button class="btn-delete" @click="deleteItem(item.name)" title="删除">✕</button>
+          </div>
         </div>
         <div class="training-card-body">
           <div class="training-section" v-if="Object.keys(item.data.training_config || {}).length > 0">
@@ -161,6 +166,20 @@ function highlightJson(data) {
     else if (/null/.test(match)) { cls = 'json-null' }
     return '<span class="' + cls + '">' + match + '</span>'
   })
+}
+
+async function deleteItem(name) {
+  if (!confirm(`确定删除训练结果 "${name}"？`)) return
+  try {
+    const resp = await trainingApi.delete(name)
+    if (resp.data.success) {
+      loadData()
+    } else {
+      alert('删除失败：' + (resp.data.error || '未知错误'))
+    }
+  } catch (err) {
+    alert('删除出错：' + err.message)
+  }
 }
 
 onMounted(loadData)

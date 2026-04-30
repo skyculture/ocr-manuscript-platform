@@ -50,6 +50,7 @@
               <span v-if="item.has_json" class="status-badge status-done">已标注</span>
               <span v-else class="status-badge status-pending">未标注</span>
             </div>
+            <button class="btn-delete" @click.stop="deleteItem(item.name)" title="删除">✕</button>
           </div>
         </div>
       </div>
@@ -126,6 +127,21 @@ async function uploadJson() {
     }
   } catch (err) {
     alert('上传出错：' + err.message)
+  }
+}
+
+async function deleteItem(name) {
+  if (!confirm(`确定删除 "${name}" 的所有数据（图片+JSON）？`)) return
+  try {
+    const resp = await annotationApi.delete(name)
+    if (resp.data.success) {
+      selectedIndex.value = 0
+      loadData()
+    } else {
+      alert('删除失败：' + (resp.data.error || '未知错误'))
+    }
+  } catch (err) {
+    alert('删除出错：' + err.message)
   }
 }
 

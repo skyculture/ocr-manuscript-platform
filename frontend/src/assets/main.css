@@ -445,6 +445,24 @@ body::before {
 }
 .training-card-filename { color: var(--text-light); font-size: 0.8rem; }
 
+.btn-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-delete:hover {
+    background: #FDE8E8;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
 .proofreading-meta { display: flex; gap: 1.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .meta-item { color: var(--text-secondary); font-size: 0.85rem; }
 

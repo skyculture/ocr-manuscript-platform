@@ -37,10 +37,15 @@
     <div v-else class="proofreading-cards">
       <div v-for="item in items" :key="item.name" class="proofreading-card">
         <div class="proofreading-card-header">
-          <h2 class="proofreading-card-title">{{ item.data.document_name || item.name }}</h2>
-          <div class="proofreading-meta">
-            <span class="meta-item">👤 校对人员：{{ item.data.proofreader || '未知' }}</span>
-            <span class="meta-item">📅 校对日期：{{ item.data.proofread_date || '未知' }}</span>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <h2 class="proofreading-card-title">{{ item.data.document_name || item.name }}</h2>
+              <div class="proofreading-meta">
+                <span class="meta-item">👤 校对人员：{{ item.data.proofreader || '未知' }}</span>
+                <span class="meta-item">📅 校对日期：{{ item.data.proofread_date || '未知' }}</span>
+              </div>
+            </div>
+            <button class="btn-delete" @click="deleteItem(item.name)" title="删除">✕</button>
           </div>
         </div>
         <div class="proofreading-card-body">
@@ -215,6 +220,20 @@ function highlightJson(data) {
     else if (/null/.test(match)) { cls = 'json-null' }
     return '<span class="' + cls + '">' + match + '</span>'
   })
+}
+
+async function deleteItem(name) {
+  if (!confirm(`确定删除校对结果 "${name}"？`)) return
+  try {
+    const resp = await proofreadingApi.delete(name)
+    if (resp.data.success) {
+      loadData()
+    } else {
+      alert('删除失败：' + (resp.data.error || '未知错误'))
+    }
+  } catch (err) {
+    alert('删除出错：' + err.message)
+  }
 }
 
 onMounted(loadData)
