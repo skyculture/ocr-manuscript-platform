@@ -6,13 +6,16 @@ import threading
 import time
 import re
 import sys
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 UPLOAD_DIR = os.path.join(BASE_DIR, 'static', 'uploads')
+DIST_DIR = os.path.join(BASE_DIR, 'static', 'dist')
 
 ANNOTATION_IMG_DIR = os.path.join(UPLOAD_DIR, 'annotation')
 ANNOTATION_JSON_DIR = os.path.join(DATA_DIR, 'annotations')
@@ -27,6 +30,103 @@ for d in [ANNOTATION_IMG_DIR, ANNOTATION_JSON_DIR,
     os.makedirs(d, exist_ok=True)
 
 IS_CLOUD = os.environ.get('RENDER', '') == '1' or os.environ.get('DYNO', '') != ''
+
+if IS_CLOUD:
+    database_url = os.environ.get('DATABASE_URL', '')
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    if not database_url:
+        database_url = f'sqlite:///{os.path.join(BASE_DIR, "instance", "app.db")}'
+        os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "instance", "app.db")}'
+    os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+CORS(app)
+db = SQLAlchemy(app)
+
+
+class Annotation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256), unique=True, nullable=False)
+    image_filename = db.Column(db.String(256), nullable=True)
+    json_filename = db.Column(db.String(256), nullable=True)
+    json_data = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        parsed_data = None
+        if self.json_data:
+            try:
+                parsed_data = json.loads(self.json_data)
+            except Exception:
+                parsed_data = {"error": "无法解析JSON数据"}
+
+        return {
+            'name': self.name,
+            'filename': self.image_filename or self.json_filename or self.name,
+            'image_url': f'/static/uploads/annotation/{self.image_filename}' if self.image_filename else None,
+            'has_json': self.json_data is not None,
+            'json_data': parsed_data
+        }
+
+
+class TrainingResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256), unique=True, nullable=False)
+    filename = db.Column(db.String(256), nullable=False)
+    json_data = db.Column(db.Text, nullable=False)
+    image_filename = db.Column(db.String(256), nullable=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        parsed_data = None
+        try:
+            parsed_data = json.loads(self.json_data)
+        except Exception:
+            parsed_data = {"error": "无法解析JSON数据"}
+
+        has_image = self.image_filename is not None and os.path.exists(
+            os.path.join(TRAINING_IMG_DIR, self.image_filename))
+
+        return {
+            'name': self.name,
+            'filename': self.filename,
+            'data': parsed_data,
+            'has_image': has_image,
+            'image_url': f'/static/uploads/training/{self.image_filename}' if has_image else None
+        }
+
+
+class ProofreadingResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256), unique=True, nullable=False)
+    filename = db.Column(db.String(256), nullable=False)
+    json_data = db.Column(db.Text, nullable=False)
+    image_filename = db.Column(db.String(256), nullable=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        parsed_data = None
+        try:
+            parsed_data = json.loads(self.json_data)
+        except Exception:
+            parsed_data = {"error": "无法解析JSON数据"}
+
+        has_image = self.image_filename is not None and os.path.exists(
+            os.path.join(PROOFREADING_IMG_DIR, self.image_filename))
+
+        return {
+            'name': self.name,
+            'filename': self.filename,
+            'data': parsed_data,
+            'has_image': has_image,
+            'image_url': f'/static/uploads/proofreading/{self.image_filename}' if has_image else None
+        }
+
 
 tunnel_url = None
 tunnel_process = None
@@ -139,24 +239,91 @@ def auto_start_tunnel(port):
     tunnel_starting = False
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+def migrate_file_data_to_db():
+    if Annotation.query.first() is not None:
+        return
+
+    safe_print('  [迁移] 检测到数据库为空，正在从文件系统迁移数据...')
+
+    if os.path.exists(ANNOTATION_IMG_DIR):
+        for f in sorted(os.listdir(ANNOTATION_IMG_DIR)):
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp')):
+                name = os.path.splitext(f)[0]
+                json_path = os.path.join(ANNOTATION_JSON_DIR, name + '.json')
+                json_data = None
+                json_filename = None
+                if os.path.exists(json_path):
+                    try:
+                        with open(json_path, 'r', encoding='utf-8') as jf:
+                            json_data = json.load(jf)
+                        json_filename = name + '.json'
+                    except Exception:
+                        pass
+                record = Annotation(
+                    name=name,
+                    image_filename=f,
+                    json_filename=json_filename,
+                    json_data=json.dumps(json_data, ensure_ascii=False) if json_data else None
+                )
+                db.session.add(record)
+
+    if os.path.exists(TRAINING_JSON_DIR):
+        for f in sorted(os.listdir(TRAINING_JSON_DIR)):
+            if f.lower().endswith('.json'):
+                json_path = os.path.join(TRAINING_JSON_DIR, f)
+                try:
+                    with open(json_path, 'r', encoding='utf-8') as jf:
+                        data = json.load(jf)
+                    name = os.path.splitext(f)[0]
+                    img_path_png = os.path.join(TRAINING_IMG_DIR, name + '.png')
+                    img_path_jpg = os.path.join(TRAINING_IMG_DIR, name + '.jpg')
+                    img_filename = None
+                    if os.path.exists(img_path_png):
+                        img_filename = name + '.png'
+                    elif os.path.exists(img_path_jpg):
+                        img_filename = name + '.jpg'
+                    record = TrainingResult(
+                        name=name,
+                        filename=f,
+                        json_data=json.dumps(data, ensure_ascii=False),
+                        image_filename=img_filename
+                    )
+                    db.session.add(record)
+                except Exception:
+                    pass
+
+    if os.path.exists(PROOFREADING_JSON_DIR):
+        for f in sorted(os.listdir(PROOFREADING_JSON_DIR)):
+            if f.lower().endswith('.json'):
+                json_path = os.path.join(PROOFREADING_JSON_DIR, f)
+                try:
+                    with open(json_path, 'r', encoding='utf-8') as jf:
+                        data = json.load(jf)
+                    name = os.path.splitext(f)[0]
+                    img_path_png = os.path.join(PROOFREADING_IMG_DIR, name + '.png')
+                    img_path_jpg = os.path.join(PROOFREADING_IMG_DIR, name + '.jpg')
+                    img_filename = None
+                    if os.path.exists(img_path_png):
+                        img_filename = name + '.png'
+                    elif os.path.exists(img_path_jpg):
+                        img_filename = name + '.jpg'
+                    record = ProofreadingResult(
+                        name=name,
+                        filename=f,
+                        json_data=json.dumps(data, ensure_ascii=False),
+                        image_filename=img_filename
+                    )
+                    db.session.add(record)
+                except Exception:
+                    pass
+
+    db.session.commit()
+    safe_print('  [迁移] 数据迁移完成')
 
 
-@app.route('/annotation')
-def annotation():
-    return render_template('annotation.html')
-
-
-@app.route('/training')
-def training():
-    return render_template('training.html')
-
-
-@app.route('/proofreading')
-def proofreading():
-    return render_template('proofreading.html')
+with app.app_context():
+    db.create_all()
+    migrate_file_data_to_db()
 
 
 @app.route('/api/network-info')
@@ -166,7 +333,9 @@ def network_info():
         cloud_url = f'https://{host}'
         return jsonify({
             'ips': [],
+            'local_ip': '',
             'campus_network_detected': False,
+            'public_url': cloud_url,
             'tunnel_url': cloud_url,
             'tunnel_active': True,
             'tunnel_starting': False,
@@ -179,7 +348,9 @@ def network_info():
     campus_detected = any(is_campus_network(ip) for ip in ips)
     return jsonify({
         'ips': ips,
+        'local_ip': ips[0] if ips else '',
         'campus_network_detected': campus_detected,
+        'public_url': tunnel_url,
         'tunnel_url': tunnel_url,
         'tunnel_active': tunnel_url is not None,
         'tunnel_starting': tunnel_starting,
@@ -187,6 +358,11 @@ def network_info():
         'cloudflared_available': find_cloudflared() is not None,
         'is_cloud': False
     })
+
+
+@app.route('/api/network/info')
+def network_info_alt():
+    return network_info()
 
 
 @app.route('/api/tunnel/start')
@@ -216,28 +392,8 @@ def start_tunnel():
 
 @app.route('/api/annotation/list')
 def annotation_list():
-    images = []
-    if os.path.exists(ANNOTATION_IMG_DIR):
-        for f in sorted(os.listdir(ANNOTATION_IMG_DIR)):
-            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp')):
-                name = os.path.splitext(f)[0]
-                json_path = os.path.join(ANNOTATION_JSON_DIR, name + '.json')
-                has_json = os.path.exists(json_path)
-                json_data = None
-                if has_json:
-                    try:
-                        with open(json_path, 'r', encoding='utf-8') as jf:
-                            json_data = json.load(jf)
-                    except Exception:
-                        json_data = {"error": "无法解析JSON文件"}
-                images.append({
-                    'name': name,
-                    'filename': f,
-                    'image_url': f'/static/uploads/annotation/{f}',
-                    'has_json': has_json,
-                    'json_data': json_data
-                })
-    return jsonify(images)
+    records = Annotation.query.order_by(Annotation.created_at.desc()).all()
+    return jsonify([r.to_dict() for r in records])
 
 
 @app.route('/api/annotation/upload', methods=['POST'])
@@ -249,8 +405,18 @@ def annotation_upload():
         return jsonify({'error': '文件名为空'}), 400
     if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp')):
         return jsonify({'error': '不支持的图片格式'}), 400
+
+    name = os.path.splitext(file.filename)[0]
     filepath = os.path.join(ANNOTATION_IMG_DIR, file.filename)
     file.save(filepath)
+
+    record = Annotation.query.filter_by(name=name).first()
+    if record:
+        record.image_filename = file.filename
+    else:
+        record = Annotation(name=name, image_filename=file.filename)
+        db.session.add(record)
+    db.session.commit()
     return jsonify({'success': True, 'filename': file.filename})
 
 
@@ -263,43 +429,51 @@ def annotation_json_upload():
         return jsonify({'error': '文件名为空'}), 400
     if not file.filename.lower().endswith('.json'):
         return jsonify({'error': '只支持JSON文件'}), 400
+
+    name = os.path.splitext(file.filename)[0]
     filepath = os.path.join(ANNOTATION_JSON_DIR, file.filename)
     file.save(filepath)
+
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+    except Exception:
+        return jsonify({'error': 'JSON文件解析失败'}), 400
+
+    record = Annotation.query.filter_by(name=name).first()
+    if record:
+        record.json_filename = file.filename
+        record.json_data = json.dumps(json_data, ensure_ascii=False)
+    else:
+        record = Annotation(name=name, json_filename=file.filename,
+                            json_data=json.dumps(json_data, ensure_ascii=False))
+        db.session.add(record)
+    db.session.commit()
     return jsonify({'success': True, 'filename': file.filename})
+
+
+@app.route('/api/annotation/<name>', methods=['DELETE'])
+def annotation_delete(name):
+    record = Annotation.query.filter_by(name=name).first()
+    if not record:
+        return jsonify({'error': '记录不存在'}), 404
+    if record.image_filename:
+        img_path = os.path.join(ANNOTATION_IMG_DIR, record.image_filename)
+        if os.path.exists(img_path):
+            os.remove(img_path)
+    if record.json_filename:
+        json_path = os.path.join(ANNOTATION_JSON_DIR, record.json_filename)
+        if os.path.exists(json_path):
+            os.remove(json_path)
+    db.session.delete(record)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/api/training/list')
 def training_list():
-    results = []
-    if os.path.exists(TRAINING_JSON_DIR):
-        for f in sorted(os.listdir(TRAINING_JSON_DIR)):
-            if f.lower().endswith('.json'):
-                json_path = os.path.join(TRAINING_JSON_DIR, f)
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as jf:
-                        data = json.load(jf)
-                    name = os.path.splitext(f)[0]
-                    img_path = os.path.join(TRAINING_IMG_DIR, name + '.png')
-                    has_image = os.path.exists(img_path)
-                    if not has_image:
-                        img_path = os.path.join(TRAINING_IMG_DIR, name + '.jpg')
-                        has_image = os.path.exists(img_path)
-                    results.append({
-                        'name': name,
-                        'filename': f,
-                        'data': data,
-                        'has_image': has_image,
-                        'image_url': f'/static/uploads/training/{os.path.basename(img_path)}' if has_image else None
-                    })
-                except Exception as e:
-                    results.append({
-                        'name': os.path.splitext(f)[0],
-                        'filename': f,
-                        'data': {'error': f'解析失败: {str(e)}'},
-                        'has_image': False,
-                        'image_url': None
-                    })
-    return jsonify(results)
+    records = TrainingResult.query.order_by(TrainingResult.created_at.desc()).all()
+    return jsonify([r.to_dict() for r in records])
 
 
 @app.route('/api/training/upload', methods=['POST'])
@@ -308,46 +482,61 @@ def training_upload():
     image_file = request.files.get('image_file')
     if not json_file:
         return jsonify({'error': '请上传JSON结果文件'}), 400
+
+    try:
+        data = json.load(json_file)
+    except Exception:
+        return jsonify({'error': 'JSON文件解析失败'}), 400
+
+    name = os.path.splitext(json_file.filename)[0]
     json_path = os.path.join(TRAINING_JSON_DIR, json_file.filename)
+    json_file.seek(0)
     json_file.save(json_path)
+
+    img_filename = None
     if image_file and image_file.filename:
         img_path = os.path.join(TRAINING_IMG_DIR, image_file.filename)
         image_file.save(img_path)
+        img_filename = image_file.filename
+
+    record = TrainingResult.query.filter_by(name=name).first()
+    if record:
+        record.filename = json_file.filename
+        record.json_data = json.dumps(data, ensure_ascii=False)
+        if img_filename:
+            record.image_filename = img_filename
+    else:
+        record = TrainingResult(
+            name=name, filename=json_file.filename,
+            json_data=json.dumps(data, ensure_ascii=False),
+            image_filename=img_filename
+        )
+        db.session.add(record)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/training/<name>', methods=['DELETE'])
+def training_delete(name):
+    record = TrainingResult.query.filter_by(name=name).first()
+    if not record:
+        return jsonify({'error': '记录不存在'}), 404
+    json_path = os.path.join(TRAINING_JSON_DIR, record.filename)
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if record.image_filename:
+        img_path = os.path.join(TRAINING_IMG_DIR, record.image_filename)
+        if os.path.exists(img_path):
+            os.remove(img_path)
+    db.session.delete(record)
+    db.session.commit()
     return jsonify({'success': True})
 
 
 @app.route('/api/proofreading/list')
 def proofreading_list():
-    results = []
-    if os.path.exists(PROOFREADING_JSON_DIR):
-        for f in sorted(os.listdir(PROOFREADING_JSON_DIR)):
-            if f.lower().endswith('.json'):
-                json_path = os.path.join(PROOFREADING_JSON_DIR, f)
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as jf:
-                        data = json.load(jf)
-                    name = os.path.splitext(f)[0]
-                    img_path = os.path.join(PROOFREADING_IMG_DIR, name + '.png')
-                    has_image = os.path.exists(img_path)
-                    if not has_image:
-                        img_path = os.path.join(PROOFREADING_IMG_DIR, name + '.jpg')
-                        has_image = os.path.exists(img_path)
-                    results.append({
-                        'name': name,
-                        'filename': f,
-                        'data': data,
-                        'has_image': has_image,
-                        'image_url': f'/static/uploads/proofreading/{os.path.basename(img_path)}' if has_image else None
-                    })
-                except Exception as e:
-                    results.append({
-                        'name': os.path.splitext(f)[0],
-                        'filename': f,
-                        'data': {'error': f'解析失败: {str(e)}'},
-                        'has_image': False,
-                        'image_url': None
-                    })
-    return jsonify(results)
+    records = ProofreadingResult.query.order_by(ProofreadingResult.created_at.desc()).all()
+    return jsonify([r.to_dict() for r in records])
 
 
 @app.route('/api/proofreading/upload', methods=['POST'])
@@ -356,12 +545,68 @@ def proofreading_upload():
     image_file = request.files.get('image_file')
     if not json_file:
         return jsonify({'error': '请上传JSON结果文件'}), 400
+
+    try:
+        data = json.load(json_file)
+    except Exception:
+        return jsonify({'error': 'JSON文件解析失败'}), 400
+
+    name = os.path.splitext(json_file.filename)[0]
     json_path = os.path.join(PROOFREADING_JSON_DIR, json_file.filename)
+    json_file.seek(0)
     json_file.save(json_path)
+
+    img_filename = None
     if image_file and image_file.filename:
         img_path = os.path.join(PROOFREADING_IMG_DIR, image_file.filename)
         image_file.save(img_path)
+        img_filename = image_file.filename
+
+    record = ProofreadingResult.query.filter_by(name=name).first()
+    if record:
+        record.filename = json_file.filename
+        record.json_data = json.dumps(data, ensure_ascii=False)
+        if img_filename:
+            record.image_filename = img_filename
+    else:
+        record = ProofreadingResult(
+            name=name, filename=json_file.filename,
+            json_data=json.dumps(data, ensure_ascii=False),
+            image_filename=img_filename
+        )
+        db.session.add(record)
+    db.session.commit()
     return jsonify({'success': True})
+
+
+@app.route('/api/proofreading/<name>', methods=['DELETE'])
+def proofreading_delete(name):
+    record = ProofreadingResult.query.filter_by(name=name).first()
+    if not record:
+        return jsonify({'error': '记录不存在'}), 404
+    json_path = os.path.join(PROOFREADING_JSON_DIR, record.filename)
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if record.image_filename:
+        img_path = os.path.join(PROOFREADING_IMG_DIR, record.image_filename)
+        if os.path.exists(img_path):
+            os.remove(img_path)
+    db.session.delete(record)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_vue(path):
+    if path and os.path.exists(os.path.join(DIST_DIR, path)):
+        return send_from_directory(DIST_DIR, path)
+    return send_from_directory(DIST_DIR, 'index.html')
 
 
 if __name__ == '__main__':
