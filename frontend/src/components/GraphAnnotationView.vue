@@ -241,13 +241,7 @@ const highlightedJson = computed(() => {
 })
 
 function getTypeLabel(type) {
-  const labels = {
-    'TEXT': '文本', 'MAIN_TEXT': '正文', 'SIGNATURE': '签名', 'SEAL': '印章',
-    'SYMBOL_PLACEHOLDER': '符号占位', 'ILLUSTRATION': '插图',
-    'MARGINALIA': '批注', 'PAGE_NUMBER': '页码', 'HEADER': '页眉', 'FOOTER': '页脚',
-    'DELETE_TEXT': '删除文本'
-  }
-  return labels[type] || type
+  return type || ''
 }
 
 function getTypeClass(type) {
