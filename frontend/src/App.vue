@@ -9,7 +9,6 @@
         <router-link to="/annotation" class="nav-link">标注</router-link>
         <router-link to="/training" class="nav-link">训练</router-link>
         <router-link to="/proofreading" class="nav-link">校对</router-link>
-        <router-link to="/chat" class="nav-link">对话</router-link>
       </div>
     </nav>
     <main class="main-content">

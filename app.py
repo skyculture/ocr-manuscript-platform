@@ -732,61 +732,6 @@ def proofreading_delete(name):
     return jsonify({'success': True})
 
 
-conversation_history = {}
-
-def generate_response(user_message):
-    responses = [
-        "这是一个很好的问题！让我来分析一下...",
-        "我理解您的需求，以下是我的建议：",
-        "根据您的描述，我认为可以这样处理：",
-        "感谢您的提问，这是一个很有趣的话题。",
-        "让我仔细思考一下这个问题...",
-        "您说得很有道理，我完全同意您的观点。",
-        "这确实是一个值得深入探讨的问题。",
-        "我来帮您分析一下这个情况。",
-        "好的，我明白了，让我来解释一下。",
-        "这是一个非常重要的问题，让我详细说明。"
-    ]
-    import random
-    base_response = random.choice(responses)
-    return f"{base_response}\n\n关于您提到的「{user_message}」，这是一个很好的话题。由于这是一个演示版本，我可以模拟各种对话场景。如果您有具体的问题或需求，请随时告诉我，我会尽力为您提供帮助！"
-
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    data = request.get_json()
-    if not data or 'message' not in data:
-        return jsonify({'error': '缺少消息内容'}), 400
-    
-    user_id = data.get('user_id', 'default_user')
-    message = data['message']
-    
-    if user_id not in conversation_history:
-        conversation_history[user_id] = []
-    
-    conversation_history[user_id].append({'role': 'user', 'content': message})
-    
-    response = generate_response(message)
-    
-    conversation_history[user_id].append({'role': 'assistant', 'content': response})
-    
-    return jsonify({
-        'success': True,
-        'response': response,
-        'conversation': conversation_history[user_id]
-    })
-
-@app.route('/api/chat/history/<user_id>')
-def get_history(user_id):
-    history = conversation_history.get(user_id, [])
-    return jsonify({'success': True, 'history': history})
-
-@app.route('/api/chat/clear/<user_id>', methods=['POST'])
-def clear_history(user_id):
-    if user_id in conversation_history:
-        conversation_history[user_id] = []
-    return jsonify({'success': True})
-
-
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
