@@ -25,8 +25,8 @@
 
     <div class="graph-sections">
       <div class="graph-section">
-        <details class="json-details" open>
-          <summary>📋 节点列表</summary>
+        <details class="json-details">
+          <summary>点击查看节点列表</summary>
           <div class="nodes-table-wrapper">
             <table class="nodes-table">
               <thead>
@@ -55,8 +55,8 @@
       </div>
 
       <div class="graph-section">
-        <details class="json-details" open>
-          <summary>🔗 边关系</summary>
+        <details class="json-details">
+          <summary>点击查看边关系</summary>
           <div class="edges-table-wrapper">
             <table v-if="allEdges.length > 0" class="edges-table">
               <thead><tr><th>源节点</th><th>关系</th><th>目标节点</th></tr></thead>
