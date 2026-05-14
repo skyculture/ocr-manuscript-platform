@@ -72,9 +72,15 @@
       <div class="graph-section" v-if="item.image_url">
         <div class="section-subtitle-row">
           <h3 class="section-subtitle">🖼️ 图片预览</h3>
-          <div class="view-toggle">
-            <button class="toggle-btn" :class="{ active: viewMode === 'original' }" @click="viewMode = 'original'">原始图片</button>
-            <button class="toggle-btn" :class="{ active: viewMode === 'annotated' }" @click="viewMode = 'annotated'">标注图片</button>
+          <div class="view-controls">
+            <div class="view-toggle">
+              <button class="toggle-btn" :class="{ active: viewMode === 'original' }" @click="viewMode = 'original'">原始图片</button>
+              <button class="toggle-btn" :class="{ active: viewMode === 'annotated' }" @click="viewMode = 'annotated'">标注图片</button>
+            </div>
+            <label v-if="viewMode === 'annotated'" class="label-toggle">
+              <input type="checkbox" v-model="showLabels" @change="drawAnnotations()">
+              <span class="label-toggle-text">显示标注文字</span>
+            </label>
           </div>
         </div>
         <div class="annotation-image-viewer">
@@ -106,6 +112,7 @@ const props = defineProps({
 })
 
 const viewMode = ref('original')
+const showLabels = ref(true)
 const annotatedCanvas = ref(null)
 const canvasLoading = ref(false)
 
@@ -161,23 +168,25 @@ function drawAnnotations() {
       ctx.lineWidth = Math.max(2, Math.round(img.naturalWidth / 500))
       ctx.strokeRect(minX, minY, maxX - minX, maxY - minY)
 
-      const label = getTypeLabel(node.type) + (node.transcription ? `: ${node.transcription.substring(0, 12)}` : '')
-      const fontSize = Math.max(14, Math.round(img.naturalWidth / 60))
-      ctx.font = `bold ${fontSize}px "Noto Sans SC", sans-serif`
-      const textMetrics = ctx.measureText(label)
-      const labelH = fontSize + 8
-      const labelW = textMetrics.width + 12
+      if (showLabels.value) {
+        const label = getTypeLabel(node.type) + (node.transcription ? `: ${node.transcription.substring(0, 12)}` : '')
+        const fontSize = Math.max(14, Math.round(img.naturalWidth / 60))
+        ctx.font = `bold ${fontSize}px "Noto Sans SC", sans-serif`
+        const textMetrics = ctx.measureText(label)
+        const labelH = fontSize + 8
+        const labelW = textMetrics.width + 12
 
-      let labelX = minX
-      let labelY = minY - labelH
-      if (labelY < 0) labelY = minY
+        let labelX = minX
+        let labelY = minY - labelH
+        if (labelY < 0) labelY = minY
 
-      ctx.fillStyle = color.border
-      ctx.fillRect(labelX, labelY, labelW, labelH)
+        ctx.fillStyle = color.border
+        ctx.fillRect(labelX, labelY, labelW, labelH)
 
-      ctx.fillStyle = '#FFFFFF'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(label, labelX + 6, labelY + labelH / 2)
+        ctx.fillStyle = '#FFFFFF'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(label, labelX + 6, labelY + labelH / 2)
+      }
     })
 
     canvasLoading.value = false

@@ -614,6 +614,11 @@ body::before {
 .toggle-btn:hover { background: #F5EDE0; color: var(--text); }
 .toggle-btn.active { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #FFF5E6; box-shadow: 0 1px 4px rgba(139,37,0,0.2); }
 
+.view-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.label-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-secondary); user-select: none; }
+.label-toggle input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.label-toggle-text { font-weight: 500; }
+
 .annotated-canvas-wrapper { position: relative; display: inline-block; max-width: 100%; }
 .annotated-canvas-wrapper canvas { max-width: 100%; height: auto; border-radius: var(--radius); box-shadow: var(--shadow); display: block; }
 

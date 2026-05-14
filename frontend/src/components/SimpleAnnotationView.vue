@@ -3,9 +3,15 @@
     <div class="detail-panel">
       <div class="panel-header-row">
         <div class="panel-header">图片预览</div>
-        <div class="view-toggle" v-if="item.image_url && hasAnnotationData">
-          <button class="toggle-btn" :class="{ active: viewMode === 'original' }" @click="viewMode = 'original'">原始图片</button>
-          <button class="toggle-btn" :class="{ active: viewMode === 'annotated' }" @click="viewMode = 'annotated'">标注图片</button>
+        <div class="view-controls" v-if="item.image_url && hasAnnotationData">
+          <div class="view-toggle">
+            <button class="toggle-btn" :class="{ active: viewMode === 'original' }" @click="viewMode = 'original'">原始图片</button>
+            <button class="toggle-btn" :class="{ active: viewMode === 'annotated' }" @click="viewMode = 'annotated'">标注图片</button>
+          </div>
+          <label v-if="viewMode === 'annotated'" class="label-toggle">
+            <input type="checkbox" v-model="showLabels" @change="drawAnnotations()">
+            <span class="label-toggle-text">显示标注文字</span>
+          </label>
         </div>
       </div>
       <div class="image-viewer">
@@ -42,6 +48,7 @@ const props = defineProps({
 })
 
 const viewMode = ref('original')
+const showLabels = ref(true)
 const annotatedCanvas = ref(null)
 const canvasLoading = ref(false)
 
@@ -133,7 +140,7 @@ function drawAnnotations() {
       ctx.lineWidth = Math.max(2, Math.round(img.naturalWidth / 500))
       ctx.strokeRect(minX, minY, maxX - minX, maxY - minY)
 
-      if (item.label) {
+      if (showLabels.value && item.label) {
         const displayLabel = item.label.length > 15 ? item.label.substring(0, 15) + '...' : item.label
         const fontSize = Math.max(14, Math.round(img.naturalWidth / 60))
         ctx.font = `bold ${fontSize}px "Noto Sans SC", sans-serif`
