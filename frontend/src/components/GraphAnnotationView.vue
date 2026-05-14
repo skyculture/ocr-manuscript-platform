@@ -25,48 +25,52 @@
 
     <div class="graph-sections">
       <div class="graph-section">
-        <h3 class="section-subtitle">📋 节点列表</h3>
-        <div class="nodes-table-wrapper">
-          <table class="nodes-table">
-            <thead>
-              <tr>
-                <th>node_id</th>
-                <th>类型</th>
-                <th>转写文本</th>
-                <th>位置 (points)</th>
-                <th>属性</th>
-                <th>边</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="node in data" :key="node.node_id">
-                <td class="cell-id">{{ node.node_id }}</td>
-                <td><span class="type-badge" :class="getTypeClass(node.type)">{{ getTypeLabel(node.type) }}</span></td>
-                <td class="cell-transcription">{{ node.transcription || '' }}</td>
-                <td class="cell-points">{{ formatPoints(node.points) }}</td>
-                <td class="cell-attrs">{{ formatAttrs(node.attributes) }}</td>
-                <td class="cell-edges" v-html="formatEdges(node.edges)"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <details class="json-details" open>
+          <summary>📋 节点列表</summary>
+          <div class="nodes-table-wrapper">
+            <table class="nodes-table">
+              <thead>
+                <tr>
+                  <th>node_id</th>
+                  <th>类型</th>
+                  <th>转写文本</th>
+                  <th>位置 (points)</th>
+                  <th>属性</th>
+                  <th>边</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="node in data" :key="node.node_id">
+                  <td class="cell-id">{{ node.node_id }}</td>
+                  <td><span class="type-badge" :class="getTypeClass(node.type)">{{ getTypeLabel(node.type) }}</span></td>
+                  <td class="cell-transcription">{{ node.transcription || '' }}</td>
+                  <td class="cell-points">{{ formatPoints(node.points) }}</td>
+                  <td class="cell-attrs">{{ formatAttrs(node.attributes) }}</td>
+                  <td class="cell-edges" v-html="formatEdges(node.edges)"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
 
       <div class="graph-section">
-        <h3 class="section-subtitle">🔗 边关系</h3>
-        <div class="edges-table-wrapper">
-          <table v-if="allEdges.length > 0" class="edges-table">
-            <thead><tr><th>源节点</th><th>关系</th><th>目标节点</th></tr></thead>
-            <tbody>
-              <tr v-for="edge in allEdges" :key="edge.source + edge.target + edge.relation">
-                <td class="cell-id">{{ edge.source }}</td>
-                <td><span class="relation-badge">{{ getRelationLabel(edge.relation) }}</span></td>
-                <td class="cell-id">{{ edge.target }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="no-edges">无边关系</p>
-        </div>
+        <details class="json-details" open>
+          <summary>🔗 边关系</summary>
+          <div class="edges-table-wrapper">
+            <table v-if="allEdges.length > 0" class="edges-table">
+              <thead><tr><th>源节点</th><th>关系</th><th>目标节点</th></tr></thead>
+              <tbody>
+                <tr v-for="edge in allEdges" :key="edge.source + edge.target + edge.relation">
+                  <td class="cell-id">{{ edge.source }}</td>
+                  <td><span class="relation-badge">{{ edge.relation }}</span></td>
+                  <td class="cell-id">{{ edge.target }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="no-edges">无边关系</p>
+          </div>
+        </details>
       </div>
 
       <div class="graph-section" v-if="item.image_url">
@@ -255,14 +259,6 @@ function getTypeClass(type) {
   return map[type] || 'type-other'
 }
 
-function getRelationLabel(relation) {
-  const labels = {
-    'READS_AFTER': '续读', 'REPRESENTS': '代表', 'BELONGS_TO': '属于',
-    'AUTHORED': '作者', 'CONTAINS': '包含', 'REFERENCES': '引用', 'ANNOTATES': '批注'
-  }
-  return labels[relation] || relation
-}
-
 function formatPoints(points) {
   if (!points || !Array.isArray(points)) return '-'
   return points.map(p => `(${p[0]},${p[1]})`).join(' → ')
@@ -275,7 +271,7 @@ function formatAttrs(attrs) {
 
 function formatEdges(edges) {
   if (!edges || edges.length === 0) return '-'
-  return edges.map(e => `→${escapeHtml(e.target)}(${getRelationLabel(e.relation)})`).join('<br>')
+  return edges.map(e => `→${escapeHtml(e.target)}(${e.relation})`).join('<br>')
 }
 
 function escapeHtml(text) {
