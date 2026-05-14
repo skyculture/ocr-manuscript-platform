@@ -27,4 +27,10 @@ export const networkApi = {
   info: () => api.get('/network/info')
 }
 
+export const chatApi = {
+  sendMessage: (message, userId) => api.post('/chat', { message, user_id: userId }),
+  getHistory: (userId) => api.get(`/chat/history/${userId}`),
+  clearHistory: (userId) => api.post(`/chat/clear/${userId}`)
+}
+
 export default api

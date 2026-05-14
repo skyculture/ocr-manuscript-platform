@@ -57,7 +57,7 @@
       <div class="split-detail-wide">
         <template v-if="selectedItem">
           <template v-if="selectedItem.has_json && isGraphFormat(selectedItem.json_data)">
-            <GraphAnnotationView :item="selectedItem" :data="selectedItem.json_data" />
+            <GraphAnnotationView :item="selectedItem" :data="extractNodes(selectedItem.json_data)" />
           </template>
           <template v-else>
             <SimpleAnnotationView :item="selectedItem" />
@@ -84,7 +84,17 @@ const jsonInput = ref(null)
 const selectedItem = computed(() => items.value[selectedIndex.value] || null)
 
 function isGraphFormat(data) {
-  return Array.isArray(data) && data.length > 0 && data[0].node_id !== undefined
+  if (Array.isArray(data) && data.length > 0 && data[0].node_id !== undefined) return true
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    if (Array.isArray(data.nodes) && data.nodes.length > 0 && data.nodes[0].node_id !== undefined) return true
+  }
+  return false
+}
+
+function extractNodes(data) {
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object' && Array.isArray(data.nodes)) return data.nodes
+  return []
 }
 
 async function loadData() {

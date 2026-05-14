@@ -70,9 +70,19 @@
       </div>
 
       <div class="graph-section" v-if="item.image_url">
-        <h3 class="section-subtitle">🖼️ 原始图片</h3>
+        <div class="section-subtitle-row">
+          <h3 class="section-subtitle">🖼️ 图片预览</h3>
+          <div class="view-toggle">
+            <button class="toggle-btn" :class="{ active: viewMode === 'original' }" @click="viewMode = 'original'">原始图片</button>
+            <button class="toggle-btn" :class="{ active: viewMode === 'annotated' }" @click="viewMode = 'annotated'">标注图片</button>
+          </div>
+        </div>
         <div class="annotation-image-viewer">
-          <img :src="item.image_url" :alt="item.name" loading="lazy">
+          <img v-if="viewMode === 'original'" :src="item.image_url" :alt="item.name" loading="lazy">
+          <div v-else class="annotated-canvas-wrapper">
+            <canvas ref="annotatedCanvas"></canvas>
+            <div v-if="canvasLoading" class="canvas-loading">加载标注中...</div>
+          </div>
         </div>
       </div>
 
@@ -88,11 +98,101 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 
 const props = defineProps({
   item: Object,
   data: Array
+})
+
+const viewMode = ref('original')
+const annotatedCanvas = ref(null)
+const canvasLoading = ref(false)
+
+const typeColorMap = {
+  'TEXT': { border: '#2196F3', bg: 'rgba(33,150,243,0.12)', label: '#1565C0' },
+  'MAIN_TEXT': { border: '#1976D2', bg: 'rgba(25,118,210,0.12)', label: '#0D47A1' },
+  'SIGNATURE': { border: '#FF9800', bg: 'rgba(255,152,0,0.12)', label: '#E65100' },
+  'SEAL': { border: '#F44336', bg: 'rgba(244,67,54,0.12)', label: '#C62828' },
+  'SYMBOL_PLACEHOLDER': { border: '#9C27B0', bg: 'rgba(156,39,176,0.12)', label: '#6A1B9A' },
+  'ILLUSTRATION': { border: '#4CAF50', bg: 'rgba(76,175,80,0.12)', label: '#2E7D32' },
+  'MARGINALIA': { border: '#FF5722', bg: 'rgba(255,87,34,0.12)', label: '#BF360C' },
+  'PAGE_NUMBER': { border: '#607D8B', bg: 'rgba(96,125,139,0.12)', label: '#37474F' },
+  'HEADER': { border: '#795548', bg: 'rgba(121,85,72,0.12)', label: '#4E342E' },
+  'FOOTER': { border: '#795548', bg: 'rgba(121,85,72,0.12)', label: '#4E342E' },
+  'DELETE_TEXT': { border: '#B71C1C', bg: 'rgba(183,28,28,0.12)', label: '#B71C1C' }
+}
+
+function getNodeColor(type) {
+  return typeColorMap[type] || { border: '#9E9E9E', bg: 'rgba(158,158,158,0.12)', label: '#616161' }
+}
+
+function drawAnnotations() {
+  const canvas = annotatedCanvas.value
+  if (!canvas || !props.item.image_url) return
+
+  canvasLoading.value = true
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    const ctx = canvas.getContext('2d')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+
+    ctx.drawImage(img, 0, 0)
+
+    const nodesWithPoints = props.data.filter(node => node.points && Array.isArray(node.points) && node.points.length >= 2)
+
+    nodesWithPoints.forEach(node => {
+      const pts = node.points
+      const color = getNodeColor(node.type)
+
+      const xs = pts.map(p => p[0])
+      const ys = pts.map(p => p[1])
+      const minX = Math.min(...xs)
+      const minY = Math.min(...ys)
+      const maxX = Math.max(...xs)
+      const maxY = Math.max(...ys)
+
+      ctx.fillStyle = color.bg
+      ctx.fillRect(minX, minY, maxX - minX, maxY - minY)
+
+      ctx.strokeStyle = color.border
+      ctx.lineWidth = Math.max(2, Math.round(img.naturalWidth / 500))
+      ctx.strokeRect(minX, minY, maxX - minX, maxY - minY)
+
+      const label = getTypeLabel(node.type) + (node.transcription ? `: ${node.transcription.substring(0, 12)}` : '')
+      const fontSize = Math.max(14, Math.round(img.naturalWidth / 60))
+      ctx.font = `bold ${fontSize}px "Noto Sans SC", sans-serif`
+      const textMetrics = ctx.measureText(label)
+      const labelH = fontSize + 8
+      const labelW = textMetrics.width + 12
+
+      let labelX = minX
+      let labelY = minY - labelH
+      if (labelY < 0) labelY = minY
+
+      ctx.fillStyle = color.border
+      ctx.fillRect(labelX, labelY, labelW, labelH)
+
+      ctx.fillStyle = '#FFFFFF'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(label, labelX + 6, labelY + labelH / 2)
+    })
+
+    canvasLoading.value = false
+  }
+  img.onerror = () => {
+    canvasLoading.value = false
+  }
+  img.src = props.item.image_url
+}
+
+watch(viewMode, async (val) => {
+  if (val === 'annotated') {
+    await nextTick()
+    drawAnnotations()
+  }
 })
 
 const typeStats = computed(() => {
@@ -129,17 +229,19 @@ const highlightedJson = computed(() => {
 
 function getTypeLabel(type) {
   const labels = {
-    'TEXT': '文本', 'SIGNATURE': '签名', 'SEAL': '印章',
+    'TEXT': '文本', 'MAIN_TEXT': '正文', 'SIGNATURE': '签名', 'SEAL': '印章',
     'SYMBOL_PLACEHOLDER': '符号占位', 'ILLUSTRATION': '插图',
-    'MARGINALIA': '批注', 'PAGE_NUMBER': '页码', 'HEADER': '页眉', 'FOOTER': '页脚'
+    'MARGINALIA': '批注', 'PAGE_NUMBER': '页码', 'HEADER': '页眉', 'FOOTER': '页脚',
+    'DELETE_TEXT': '删除文本'
   }
   return labels[type] || type
 }
 
 function getTypeClass(type) {
   const map = {
-    'TEXT': 'type-text', 'SIGNATURE': 'type-signature', 'SEAL': 'type-seal',
-    'SYMBOL_PLACEHOLDER': 'type-symbol', 'ILLUSTRATION': 'type-illustration', 'MARGINALIA': 'type-marginalia'
+    'TEXT': 'type-text', 'MAIN_TEXT': 'type-text', 'SIGNATURE': 'type-signature', 'SEAL': 'type-seal',
+    'SYMBOL_PLACEHOLDER': 'type-symbol', 'ILLUSTRATION': 'type-illustration', 'MARGINALIA': 'type-marginalia',
+    'DELETE_TEXT': 'type-seal'
   }
   return map[type] || 'type-other'
 }
