@@ -241,12 +241,20 @@ function handleCanvasClick(event) {
       const tooltipHeight = Math.min(40 + Math.ceil(textLength / 10) * 16, 120)
       const labelWidth = Math.max(120, Math.min((maxX - minX) * 1.2, Math.min(textLength * 8 + 60, 320)))
       
-      const baseGap = 12
-      const extraGap = Math.min(Math.floor(textLength / 15) * 8, 28)
+      const baseGap = 15
+      const extraGap = Math.min(Math.floor(textLength / 15) * 8, 30)
       const gap = baseGap + extraGap
 
       let tooltipX = minX
       let tooltipY = minY - tooltipHeight - gap
+
+      const nodeRect = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+      const checkCollision = (tx, ty, tw, th) => {
+        return tx < nodeRect.x + nodeRect.width &&
+               tx + tw > nodeRect.x &&
+               ty < nodeRect.y + nodeRect.height &&
+               ty + th > nodeRect.y
+      }
 
       if (tooltipY < 12) {
         tooltipY = maxY + gap
@@ -254,14 +262,32 @@ function handleCanvasClick(event) {
 
       if (tooltipY + tooltipHeight > canvas.height - 12) {
         tooltipY = canvas.height - tooltipHeight - 12
-        if (tooltipY < maxY + gap) {
-          tooltipX = maxX + gap
-          tooltipY = Math.max(12, Math.min(minY, canvas.height - tooltipHeight - 12))
+      }
+
+      if (checkCollision(tooltipX, tooltipY, labelWidth, tooltipHeight)) {
+        tooltipY = maxY + gap
+        if (tooltipY + tooltipHeight > canvas.height - 12) {
+          tooltipY = canvas.height - tooltipHeight - 12
         }
+      }
+
+      if (checkCollision(tooltipX, tooltipY, labelWidth, tooltipHeight)) {
+        tooltipX = maxX + gap
+        tooltipY = Math.max(12, Math.min(minY, canvas.height - tooltipHeight - 12))
       }
 
       if (tooltipX + labelWidth > canvas.width - 12) {
         tooltipX = Math.max(12, minX - labelWidth - gap)
+      }
+
+      if (checkCollision(tooltipX, tooltipY, labelWidth, tooltipHeight)) {
+        tooltipX = Math.max(12, minX - labelWidth - gap)
+        tooltipY = Math.max(12, Math.min(minY - tooltipHeight - gap, canvas.height - tooltipHeight - 12))
+      }
+
+      if (checkCollision(tooltipX, tooltipY, labelWidth, tooltipHeight)) {
+        tooltipX = nodeRect.x + nodeRect.width / 2 - labelWidth / 2
+        tooltipY = canvas.height - tooltipHeight - 12
       }
 
       tooltipStyle.value = {
