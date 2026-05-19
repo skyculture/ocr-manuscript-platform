@@ -239,7 +239,7 @@ function handleCanvasClick(event) {
 
       const tooltipHeight = 60
       const labelWidth = Math.max(150, Math.min((maxX - minX) * 1.5, 300))
-      const gap = 20
+      const gap = 35
       
       let tooltipX = minX
       let tooltipY = minY - tooltipHeight - gap
