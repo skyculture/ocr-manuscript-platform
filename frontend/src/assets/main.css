@@ -629,22 +629,29 @@ body::before {
   background: rgba(255,253,248,0.98);
   border: 2px solid;
   border-radius: var(--radius);
-  padding: 8px 12px;
+  padding: 10px 14px;
   box-shadow: var(--shadow-lg);
   pointer-events: none;
   z-index: 100;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-height: 160px;
+  overflow-y: auto;
 }
 .node-info-type {
   font-weight: 700;
   font-size: 0.85rem;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: #5D4E37;
   font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .node-info-transcription {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text);
-  line-height: 1.4;
+  line-height: 1.5;
   font-family: 'Noto Serif SC', serif;
 }
 
