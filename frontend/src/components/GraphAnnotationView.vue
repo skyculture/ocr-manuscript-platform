@@ -239,20 +239,25 @@ function handleCanvasClick(event) {
 
       const tooltipHeight = 60
       const labelWidth = Math.max(150, Math.min((maxX - minX) * 1.5, 300))
+      const gap = 20
       
       let tooltipX = minX
-      let tooltipY = minY - tooltipHeight - 8
+      let tooltipY = minY - tooltipHeight - gap
 
-      if (tooltipY < 10) {
-        tooltipY = maxY + 8
+      if (tooltipY < 15) {
+        tooltipY = maxY + gap
       }
 
-      if (tooltipY + tooltipHeight > canvas.height - 10) {
-        tooltipY = canvas.height - tooltipHeight - 10
+      if (tooltipY + tooltipHeight > canvas.height - 15) {
+        tooltipY = canvas.height - tooltipHeight - 15
+        if (tooltipY < maxY + gap) {
+          tooltipX = maxX + gap
+          tooltipY = minY
+        }
       }
 
-      if (tooltipX + labelWidth > canvas.width - 10) {
-        tooltipX = canvas.width - labelWidth - 10
+      if (tooltipX + labelWidth > canvas.width - 15) {
+        tooltipX = Math.max(15, minX - labelWidth - gap)
       }
 
       tooltipStyle.value = {
