@@ -122,21 +122,21 @@ const selectedNode = ref(null)
 const tooltipStyle = ref({})
 
 const typeColorMap = {
-  'TEXT': { border: '#2196F3', bg: 'rgba(33,150,243,0.12)', label: '#1565C0' },
-  'MAIN_TEXT': { border: '#1976D2', bg: 'rgba(25,118,210,0.12)', label: '#0D47A1' },
-  'SIGNATURE': { border: '#FF9800', bg: 'rgba(255,152,0,0.12)', label: '#E65100' },
-  'SEAL': { border: '#F44336', bg: 'rgba(244,67,54,0.12)', label: '#C62828' },
-  'SYMBOL_PLACEHOLDER': { border: '#9C27B0', bg: 'rgba(156,39,176,0.12)', label: '#6A1B9A' },
-  'ILLUSTRATION': { border: '#4CAF50', bg: 'rgba(76,175,80,0.12)', label: '#2E7D32' },
-  'MARGINALIA': { border: '#FF5722', bg: 'rgba(255,87,34,0.12)', label: '#BF360C' },
-  'PAGE_NUMBER': { border: '#607D8B', bg: 'rgba(96,125,139,0.12)', label: '#37474F' },
-  'HEADER': { border: '#795548', bg: 'rgba(121,85,72,0.12)', label: '#4E342E' },
-  'FOOTER': { border: '#795548', bg: 'rgba(121,85,72,0.12)', label: '#4E342E' },
-  'DELETE_TEXT': { border: '#B71C1C', bg: 'rgba(183,28,28,0.12)', label: '#B71C1C' }
+  'TEXT': { border: '#1565C0', bg: 'rgba(21,101,192,0.25)', unselected: 'rgba(21,101,192,0.1)' },
+  'MAIN_TEXT': { border: '#0D47A1', bg: 'rgba(13,71,161,0.25)', unselected: 'rgba(13,71,161,0.1)' },
+  'SIGNATURE': { border: '#E65100', bg: 'rgba(230,81,0,0.25)', unselected: 'rgba(230,81,0,0.1)' },
+  'SEAL': { border: '#C62828', bg: 'rgba(198,40,40,0.25)', unselected: 'rgba(198,40,40,0.1)' },
+  'SYMBOL_PLACEHOLDER': { border: '#6A1B9A', bg: 'rgba(106,27,154,0.25)', unselected: 'rgba(106,27,154,0.1)' },
+  'ILLUSTRATION': { border: '#2E7D32', bg: 'rgba(46,125,50,0.25)', unselected: 'rgba(46,125,50,0.1)' },
+  'MARGINALIA': { border: '#BF360C', bg: 'rgba(191,54,12,0.25)', unselected: 'rgba(191,54,12,0.1)' },
+  'PAGE_NUMBER': { border: '#0277BD', bg: 'rgba(2,119,189,0.3)', unselected: 'rgba(2,119,189,0.12)' },
+  'HEADER': { border: '#4E342E', bg: 'rgba(78,52,46,0.3)', unselected: 'rgba(78,52,46,0.12)' },
+  'FOOTER': { border: '#4E342E', bg: 'rgba(78,52,46,0.3)', unselected: 'rgba(78,52,46,0.12)' },
+  'DELETE_TEXT': { border: '#880E4F', bg: 'rgba(136,14,79,0.25)', unselected: 'rgba(136,14,79,0.1)' }
 }
 
 function getNodeColor(type) {
-  return typeColorMap[type] || { border: '#9E9E9E', bg: 'rgba(158,158,158,0.12)', label: '#616161' }
+  return typeColorMap[type] || { border: '#757575', bg: 'rgba(117,117,117,0.25)', unselected: 'rgba(117,117,117,0.1)' }
 }
 
 function drawAnnotations() {
@@ -167,11 +167,11 @@ function drawAnnotations() {
       const maxX = Math.max(...xs)
       const maxY = Math.max(...ys)
 
-      ctx.fillStyle = isSelected ? color.bg : 'rgba(0,0,0,0.05)'
+      ctx.fillStyle = isSelected ? color.bg : color.unselected
       ctx.fillRect(minX, minY, maxX - minX, maxY - minY)
 
-      ctx.strokeStyle = isSelected ? color.border : '#9E9E9E'
-      ctx.lineWidth = isSelected ? Math.max(3, Math.round(img.naturalWidth / 400)) : Math.max(2, Math.round(img.naturalWidth / 500))
+      ctx.strokeStyle = color.border
+      ctx.lineWidth = isSelected ? Math.max(4, Math.round(img.naturalWidth / 350)) : Math.max(2, Math.round(img.naturalWidth / 600))
       ctx.strokeRect(minX, minY, maxX - minX, maxY - minY)
     })
 
