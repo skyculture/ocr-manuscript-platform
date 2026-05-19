@@ -118,7 +118,7 @@ const props = defineProps({
 const viewMode = ref('original')
 const annotatedCanvas = ref(null)
 const canvasLoading = ref(false)
-const selectedNode = ref(null)
+const selectedIndex = ref(-1)
 const tooltipStyle = ref({})
 
 const typeColorMap = {
@@ -155,10 +155,10 @@ function drawAnnotations() {
 
     const nodesWithPoints = props.data.filter(node => node.points && Array.isArray(node.points) && node.points.length >= 2)
 
-    nodesWithPoints.forEach(node => {
+    nodesWithPoints.forEach((node, index) => {
       const pts = node.points
       const color = getNodeColor(node.type)
-      const isSelected = selectedNode.value && selectedNode.value.node_id === node.node_id
+      const isSelected = selectedIndex.value === index
 
       const xs = pts.map(p => p[0])
       const ys = pts.map(p => p[1])
@@ -205,9 +205,10 @@ function handleCanvasClick(event) {
   const y = (event.clientY - rect.top) * scaleY
 
   const nodesWithPoints = props.data.filter(node => node.points && Array.isArray(node.points) && node.points.length >= 2)
-  let clickedNode = null
+  let clickedIndex = -1
 
-  for (const node of nodesWithPoints) {
+  for (let i = 0; i < nodesWithPoints.length; i++) {
+    const node = nodesWithPoints[i]
     const pts = node.points
     const xs = pts.map(p => p[0])
     const ys = pts.map(p => p[1])
@@ -217,16 +218,17 @@ function handleCanvasClick(event) {
     const maxY = Math.max(...ys)
 
     if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-      clickedNode = node
+      clickedIndex = i
       break
     }
   }
 
-  if (clickedNode && selectedNode.value && selectedNode.value.node_id === clickedNode.node_id) {
-    selectedNode.value = null
+  if (clickedIndex >= 0 && selectedIndex.value === clickedIndex) {
+    selectedIndex.value = -1
   } else {
-    selectedNode.value = clickedNode
-    if (clickedNode) {
+    selectedIndex.value = clickedIndex
+    if (clickedIndex >= 0) {
+      const clickedNode = nodesWithPoints[clickedIndex]
       const pts = clickedNode.points
       const xs = pts.map(p => p[0])
       const ys = pts.map(p => p[1])
@@ -253,10 +255,13 @@ function handleCanvasClick(event) {
 }
 
 const selectedNodeInfo = computed(() => {
-  if (!selectedNode.value) return null
+  if (selectedIndex.value < 0) return null
+  const nodesWithPoints = props.data.filter(node => node.points && Array.isArray(node.points) && node.points.length >= 2)
+  const node = nodesWithPoints[selectedIndex.value]
+  if (!node) return null
   return {
-    type: selectedNode.value.type,
-    transcription: selectedNode.value.transcription || ''
+    type: node.type,
+    transcription: node.transcription || ''
   }
 })
 
@@ -268,7 +273,7 @@ watch(viewMode, async (val) => {
 })
 
 watch(() => props.data, () => {
-  selectedNode.value = null
+  selectedIndex.value = -1
 }, { deep: true })
 
 const typeStats = computed(() => {
