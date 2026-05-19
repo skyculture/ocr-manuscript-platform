@@ -256,6 +256,10 @@ watch(viewMode, async (val) => {
   }
 })
 
+watch(() => props.data, () => {
+  selectedNode.value = null
+}, { deep: true })
+
 const typeStats = computed(() => {
   const stats = {}
   props.data.forEach(node => {
