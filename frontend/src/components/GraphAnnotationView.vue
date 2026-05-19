@@ -81,17 +81,17 @@
               <button class="toggle-btn" :class="{ active: viewMode === 'original' }" @click="viewMode = 'original'">原始图片</button>
               <button class="toggle-btn" :class="{ active: viewMode === 'annotated' }" @click="viewMode = 'annotated'">标注图片</button>
             </div>
-            <label v-if="viewMode === 'annotated'" class="label-toggle">
-              <input type="checkbox" v-model="showLabels" @change="drawAnnotations()">
-              <span class="label-toggle-text">显示标注文字</span>
-            </label>
           </div>
         </div>
         <div class="annotation-image-viewer">
           <img v-if="viewMode === 'original'" :src="item.image_url" :alt="item.name" loading="lazy">
           <div v-else class="annotated-canvas-wrapper">
-            <canvas ref="annotatedCanvas"></canvas>
+            <canvas ref="annotatedCanvas" @click="handleCanvasClick"></canvas>
             <div v-if="canvasLoading" class="canvas-loading">加载标注中...</div>
+            <div v-if="selectedNodeInfo" class="node-info-tooltip" :style="tooltipStyle">
+              <div class="node-info-type">{{ selectedNodeInfo.type }}</div>
+              <div class="node-info-transcription">{{ selectedNodeInfo.transcription }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -116,9 +116,10 @@ const props = defineProps({
 })
 
 const viewMode = ref('original')
-const showLabels = ref(true)
 const annotatedCanvas = ref(null)
 const canvasLoading = ref(false)
+const selectedNode = ref(null)
+const tooltipStyle = ref({})
 
 const typeColorMap = {
   'TEXT': { border: '#2196F3', bg: 'rgba(33,150,243,0.12)', label: '#1565C0' },
@@ -157,6 +158,7 @@ function drawAnnotations() {
     nodesWithPoints.forEach(node => {
       const pts = node.points
       const color = getNodeColor(node.type)
+      const isSelected = selectedNode.value && selectedNode.value.node_id === node.node_id
 
       const xs = pts.map(p => p[0])
       const ys = pts.map(p => p[1])
@@ -165,32 +167,12 @@ function drawAnnotations() {
       const maxX = Math.max(...xs)
       const maxY = Math.max(...ys)
 
-      ctx.fillStyle = color.bg
+      ctx.fillStyle = isSelected ? color.bg : 'rgba(0,0,0,0.05)'
       ctx.fillRect(minX, minY, maxX - minX, maxY - minY)
 
-      ctx.strokeStyle = color.border
-      ctx.lineWidth = Math.max(2, Math.round(img.naturalWidth / 500))
+      ctx.strokeStyle = isSelected ? color.border : '#9E9E9E'
+      ctx.lineWidth = isSelected ? Math.max(3, Math.round(img.naturalWidth / 400)) : Math.max(2, Math.round(img.naturalWidth / 500))
       ctx.strokeRect(minX, minY, maxX - minX, maxY - minY)
-
-      if (showLabels.value) {
-        const label = getTypeLabel(node.type) + (node.transcription ? `: ${node.transcription.substring(0, 12)}` : '')
-        const fontSize = Math.max(14, Math.round(img.naturalWidth / 60))
-        ctx.font = `bold ${fontSize}px "Noto Sans SC", sans-serif`
-        const textMetrics = ctx.measureText(label)
-        const labelH = fontSize + 8
-        const labelW = textMetrics.width + 12
-
-        let labelX = minX
-        let labelY = minY - labelH
-        if (labelY < 0) labelY = minY
-
-        ctx.fillStyle = color.border
-        ctx.fillRect(labelX, labelY, labelW, labelH)
-
-        ctx.fillStyle = '#FFFFFF'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(label, labelX + 6, labelY + labelH / 2)
-      }
     })
 
     canvasLoading.value = false
@@ -200,6 +182,72 @@ function drawAnnotations() {
   }
   img.src = props.item.image_url
 }
+
+function handleCanvasClick(event) {
+  const canvas = annotatedCanvas.value
+  if (!canvas) return
+
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / rect.width
+  const scaleY = canvas.height / rect.height
+  const x = (event.clientX - rect.left) * scaleX
+  const y = (event.clientY - rect.top) * scaleY
+
+  const nodesWithPoints = props.data.filter(node => node.points && Array.isArray(node.points) && node.points.length >= 2)
+  let clickedNode = null
+
+  for (const node of nodesWithPoints) {
+    const pts = node.points
+    const xs = pts.map(p => p[0])
+    const ys = pts.map(p => p[1])
+    const minX = Math.min(...xs)
+    const minY = Math.min(...ys)
+    const maxX = Math.max(...xs)
+    const maxY = Math.max(...ys)
+
+    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+      clickedNode = node
+      break
+    }
+  }
+
+  if (clickedNode && selectedNode.value && selectedNode.value.node_id === clickedNode.node_id) {
+    selectedNode.value = null
+  } else {
+    selectedNode.value = clickedNode
+    if (clickedNode) {
+      const pts = clickedNode.points
+      const xs = pts.map(p => p[0])
+      const ys = pts.map(p => p[1])
+      const minX = Math.min(...xs)
+      const minY = Math.min(...ys)
+      const maxX = Math.max(...xs)
+      const maxY = Math.max(...ys)
+
+      const labelWidth = Math.max(150, (maxX - minX))
+      let tooltipX = minX
+      let tooltipY = minY - 60
+      if (tooltipY < 10) tooltipY = maxY + 10
+      if (tooltipX + labelWidth > canvas.width) tooltipX = canvas.width - labelWidth - 10
+
+      tooltipStyle.value = {
+        left: `${tooltipX}px`,
+        top: `${tooltipY}px`,
+        maxWidth: `${Math.min(labelWidth, 300)}px`,
+        borderColor: getNodeColor(clickedNode.type).border
+      }
+    }
+  }
+  drawAnnotations()
+}
+
+const selectedNodeInfo = computed(() => {
+  if (!selectedNode.value) return null
+  return {
+    type: selectedNode.value.type,
+    transcription: selectedNode.value.transcription || ''
+  }
+})
 
 watch(viewMode, async (val) => {
   if (val === 'annotated') {
