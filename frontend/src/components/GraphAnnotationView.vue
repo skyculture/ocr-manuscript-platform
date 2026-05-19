@@ -172,7 +172,18 @@ function drawAnnotations() {
 
       ctx.strokeStyle = color.border
       ctx.lineWidth = isSelected ? Math.max(4, Math.round(img.naturalWidth / 350)) : Math.max(2, Math.round(img.naturalWidth / 600))
+      
+      if (isSelected) {
+        ctx.shadowColor = color.border
+        ctx.shadowBlur = 10
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 0
+      }
       ctx.strokeRect(minX, minY, maxX - minX, maxY - minY)
+      
+      if (isSelected) {
+        ctx.shadowBlur = 0
+      }
     })
 
     canvasLoading.value = false
