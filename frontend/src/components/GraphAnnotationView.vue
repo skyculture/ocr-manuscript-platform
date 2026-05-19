@@ -238,8 +238,9 @@ function handleCanvasClick(event) {
       const maxY = Math.max(...ys)
 
       const textLength = (clickedNode.type?.length || 0) + (clickedNode.transcription?.length || 0)
-      const tooltipHeight = Math.min(40 + Math.ceil(textLength / 10) * 16, 120)
-      const labelWidth = Math.max(120, Math.min((maxX - minX) * 1.2, Math.min(textLength * 8 + 60, 320)))
+      const tooltipHeight = Math.min(50 + Math.ceil(textLength / 15) * 14, 140)
+      const maxWidth = Math.max(200, Math.min(canvas.width * 0.45, 450))
+      const labelWidth = Math.max(120, Math.min(textLength * 7 + 80, maxWidth))
       
       const baseGap = 15
       const extraGap = Math.min(Math.floor(textLength / 15) * 8, 30)
